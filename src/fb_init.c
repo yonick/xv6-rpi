@@ -48,22 +48,6 @@ uint32 mbox0_read (int ch)
     return -1;
 }
 
-// framebuffer information: used to communicate with GPU to
-// set resolution and retrieve framebuffer
-struct fb_info {
-    uint32 wd;
-    uint32 ht;
-    uint32 v_wd;
-    uint32 v_ht;
-    uint32 pitch;      // GPU - Pitch
-    uint32 depth;
-    uint32 x;
-    uint32 y;
-    uint32 ptr;    // GPU - framebuffer pointer
-    uint32 size;       // GPU - size
-};
-
-volatile struct fb_info fb __attribute__ ((aligned (16)));
 
 // a character is 8-bit wide, and 16-bit high, each font
 // is thus 16 bytes
@@ -72,39 +56,35 @@ volatile struct fb_info fb __attribute__ ((aligned (16)));
 #define CH_COLOR    0xFFFF
 
 struct {
-    uint32  c_wd;  // how many characters in a row
-    uint32  c_ht; // how many lines in a column
+    uint32  wd;     // screen width
+    uint32  ht;     // screen height
+    uint32  c_wd;   // how many characters in a row
+    uint32  c_ht;   // how many lines in a column
     uint32  cur_x;  // current x position
     uint32  cur_y;  // current y position
+    uint32  ptr;    // frame buffer address (physical address)
 } fb_con;
 
-extern uint32 font_addr;
-uint32* fonts = &font_addr;
+extern uint32   font_addr;  // symbole defined in entry.S
+uint32*         fonts = &font_addr;
+uint16*         fb_ptr;
 
-static void inline set_pixle (int x, int y, uint16 color)
-{
-    uint16 *fptr;
-
-    if ((x >= fb.wd) || (y >= fb.ht)) {
-        return;
-    }
-    
-    fptr = (uint16*)(fb.ptr);
-    fptr[x + y * fb.wd] = color;
-}
 
 // draw a line of character
 static void inline draw_cline (int x, int y, uint32 l)
 {
+    int b;
+
     l &= 0xFF;
+    b  = x + y * fb_con.wd;
 
     while (l != 0) {
         if (l & 0x01) {
-            set_pixle (x, y, CH_COLOR);
+            fb_ptr[b] = CH_COLOR;
         }
 
         l >>= 1;
-        x++;
+        b++;
     }
 }
 
@@ -116,6 +96,8 @@ static void inline draw_cword (int x, int y, uint32 w)
     draw_cline(x, y + 3, w >> 24);
 }
 
+// write a character at position (cx, cy). cx and cy are character,
+// offset, not pixle offset. 
 static void _con_putc (int cx, int cy, int ch)
 {
     uint32  w1, w2, w3, w4;
@@ -142,6 +124,22 @@ static void _con_putc (int cx, int cy, int ch)
     draw_cword(cx, cy + 12, w4);
 }
 
+// clear the screen
+void clear_screen ()
+{
+    uint32 *p;
+    int n;
+
+    // clear the screen, write 32 bits a time
+    p = (uint32*)fb_ptr;
+    n = (fb_con.wd * fb_con.ht) >> 1;
+
+    while (n >= 0) {
+        p[n--] = 0x00;
+    }
+}
+
+// write a character at the current poistion
 void con_putc (char c)
 {
     _con_putc(fb_con.cur_x, fb_con.cur_y, c);
@@ -150,10 +148,11 @@ void con_putc (char c)
 
     if ((fb_con.cur_x >= fb_con.c_wd) || (c == '\n')) {
         fb_con.cur_x = 0;
-
         fb_con.cur_y++;
+
         if (fb_con.cur_y >= fb_con.c_ht) {
             fb_con.cur_y = 0;
+            clear_screen();
         }
     }
 }
@@ -166,31 +165,62 @@ void con_puts (char *s)
     }
 }
 
+void con_putint (char *prefix, uint val, char* suffix)
+{
+    char* arr = "0123456789ABCDEF";
+    int idx;
+
+    if (prefix) {
+        con_puts (prefix);
+    }
+
+    for (idx = sizeof(val) * 8 - 4; idx >= 0; idx -= 4) {
+        con_putc(arr[(val >> idx) & 0x0F]);
+    }
+
+    if (suffix) {
+        con_puts(suffix);
+    }
+}
+
 void fb_init ()
 {
-    fb.wd = 1280;
-    fb.ht = 1024;
-    fb.v_wd = 1280;
-    fb.v_ht = 1024;
-    fb.pitch = 0;
-    fb.depth = 16;
-    fb.x = 0;
-    fb.y = 0;
-    fb.ptr = 0;
-    fb.size = 0;
+    // framebuffer information: used to communicate with GPU to
+    // set resolution and retrieve framebuffer address. This
+    // data structure needs to be aligned at 16-bytes. GCC will
+    // generate correct code to align it (even it is a local variable).
+    struct fb_info {
+        uint32 wd;
+        uint32 ht;
+        uint32 v_wd;
+        uint32 v_ht;
+        uint32 pitch;       // GPU - Pitch
+        uint32 depth;
+        uint32 x;
+        uint32 y;
+        uint32 ptr;         // GPU - framebuffer pointer
+        uint32 size;        // GPU - size
+    } fb __attribute__ ((aligned (16))) = {
+        1024, 768, 1024, 768, 0, 16, 0, 0, 0, 0
+    };
 
     do {
-        // need to add 0x40000000 to use uncache alias
+        // need to add 0x40000000 to use uncached alias
         mbox0_write ((uint32)(&fb) | 0x40000000, 1);
         mbox0_read (1);
     } while (fb.ptr == 0);
 
     fb.ptr -= 0x40000000; // convert framebuf address to ARM physical addr
 
-    fb_con.c_wd = (fb.wd >> CH_XSHIFT);
-    fb_con.c_ht = (fb.ht >> CH_YSHIFT);
+    // save the info to fb_con, a clear data structure
+    fb_con.wd   = fb.wd;
+    fb_con.ht   = fb.ht;
+    fb_con.ptr  = fb.ptr;
+    
+    fb_con.c_wd = (fb_con.wd >> CH_XSHIFT);
+    fb_con.c_ht = (fb_con.ht >> CH_YSHIFT);
     fb_con.cur_x = fb_con.cur_y = 0;
+    fb_ptr = (uint16*)(fb_con.ptr);
 
-    con_puts("hello world\n");
-    con_puts ("I am OK...\n");
+    con_puts ("Frame-buffer based console initialized...");
 }
