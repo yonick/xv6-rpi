@@ -25,6 +25,8 @@ typedef uint32	pte_t;
 typedef uint32  pde_t;
 typedef void (*ISR) (struct trapframe *tf, int n);
 
+void            fb_init(void);
+int             blink (int times);
 // arm.c
 void            set_stk(uint mode, uint addr);
 void            cli (void);

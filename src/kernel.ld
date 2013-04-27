@@ -9,22 +9,16 @@ SECTIONS
   /* the entry point, before enabling paging. The code to enable paing
    needs to have the same virtual/physical address. entry.S and start.c
    run in this initial setting.*/
-  . = 0x10000;
+  . = 0x8000;
   .start_sec : {
-    entry.o(.text)
-    start.o(.text .text.*)
-
-    entry.o(.rodata .rodata.*)
-    start.o(.rodata .rodata.*)
-
-    entry.o(.data .data.*)
-    start.o(.data .data.*)
+    entry.o start.o fb_init.o(.text .text.*)
+    entry.o start.o fb_init.o(.rodata .rodata.*)
+    entry.o start.o fb_init.o(.data .data.*)
 
     PROVIDE(edata_entry = .);
 
-    entry.o(.bss .bss.* COMMON)
-    start.o(.bss .bss.* COMMON)
-
+    entry.o start.o fb_init.o(.bss .bss.* COMMON)
+    
     /*define a stack for the entry*/
     . = ALIGN(0x1000);
     . += ENTRY_SVC_STACK_SIZE;

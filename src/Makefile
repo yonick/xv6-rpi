@@ -7,40 +7,41 @@ include makefile.inc
 LIBS=-lgcc
 
 OBJS = \
-	arm.o\
-	asm.o\
-	bio.o\
-	console.o\
-	exec.o\
-	file.o\
-	fs.o\
-	kalloc.o\
-	log.o\
-	main.o\
-	memide.o\
-	picirq.o\
-	pipe.o\
-	proc.o\
-	spinlock.o\
-	start.o\
-	string.o\
-	swtch.o\
-	syscall.o\
-	sysfile.o\
-	sysproc.o\
-	timer.o\
-	trap_asm.o\
-	trap.o\
-	uart.o\
-	vm.o
+    start.o\
+    fb_init.o
+
+#	arm.o\
+#	asm.o\
+#	bio.o\
+#	console.o\
+#	exec.o\
+#	file.o\
+#	fs.o\
+#	kalloc.o\
+#	log.o\
+#	main.o\
+#	memide.o\
+#	picirq.o\
+#	pipe.o\
+#	proc.o\
+#	spinlock.o\	
+#	string.o\
+#	swtch.o\
+#	syscall.o\
+#	sysfile.o\
+#	sysproc.o\
+#	timer.o\
+#	trap_asm.o\
+#	trap.o\
+#	uart.o\
+#	vm.o
 	
-kernel.elf: $(OBJS) entry.o kernel.ld initcode fs.img
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel.elf entry.o $(OBJS) $(LIBS) -b binary initcode fs.img
+kernel.elf: $(OBJS) entry.o kernel.ld
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel.elf entry.o $(OBJS) $(LIBS)
 	$(OBJDUMP) -S kernel.elf > kernel.asm
 	$(OBJDUMP) -t kernel.elf | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
-
-qemu: kernel.elf
-	$(QEMU) -M versatilepb -m 128 -cpu arm1176  -nographic -kernel kernel.elf
+	$(OBJCOPY)  kernel.elf -O binary kernel.img
+    
 
 #initcode is linked into the kernel, it will be used to craft the first process
 initcode: initcode.S
@@ -55,5 +56,5 @@ fs.img:
 
 clean: 
 	rm -f *.o *.d *.asm *.sym vectors.S bootblock entryother \
-	initcode initcode.out kernel xv6.img fs.img kernel.elf memfs mkfs
+	initcode initcode.out kernel kernel.img xv6.img fs.img kernel.elf memfs mkfs
 	make -C usr clean
