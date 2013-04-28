@@ -17,7 +17,7 @@ volatile uint32* mbox_base = (uint32*)0x2000B880;
 #define MBOX_EMPTY  0x40000000  // bit 30 is set if mbox is empty
 
 // write an value to the mailbox channel ch
-void mbox0_write (uint32 val, int ch)
+static void mbox0_write (uint32 val, int ch)
 {
     uint32 data;
 
@@ -29,7 +29,7 @@ void mbox0_write (uint32 val, int ch)
     mbox_base[WRITE] = data;
 }
 
-uint32 mbox0_read (int ch)
+static uint32 mbox0_read (int ch)
 {
     uint32  data;
 
@@ -55,20 +55,9 @@ uint32 mbox0_read (int ch)
 #define CH_YSHIFT        4
 #define CH_COLOR    0xFFFF
 
-struct {
-    uint32  wd;     // screen width
-    uint32  ht;     // screen height
-    uint32  c_wd;   // how many characters in a row
-    uint32  c_ht;   // how many lines in a column
-    uint32  cur_x;  // current x position
-    uint32  cur_y;  // current y position
-    uint32  ptr;    // frame buffer address (physical address)
-} fb_con;
-
-extern uint32   font_addr;  // symbole defined in entry.S
-uint32*         fonts = &font_addr;
-uint16*         fb_ptr;
-
+struct _fb_con          fbcon_lo;
+static uint32*          fonts = &font_img;
+static uint16*          fb_ptr;
 
 // draw a line of character
 static void inline draw_cline (int x, int y, uint32 l)
@@ -76,7 +65,7 @@ static void inline draw_cline (int x, int y, uint32 l)
     int b;
 
     l &= 0xFF;
-    b  = x + y * fb_con.wd;
+    b  = x + y * fbcon_lo.wd;
 
     while (l != 0) {
         if (l & 0x01) {
@@ -98,7 +87,7 @@ static void inline draw_cword (int x, int y, uint32 w)
 
 // write a character at position (cx, cy). cx and cy are character,
 // offset, not pixle offset. 
-static void _con_putc (int cx, int cy, int ch)
+static void _fb_putc (int cx, int cy, int ch)
 {
     uint32  w1, w2, w3, w4;
 
@@ -125,14 +114,14 @@ static void _con_putc (int cx, int cy, int ch)
 }
 
 // clear the screen
-void clear_screen ()
+void fb_clear ()
 {
     uint32 *p;
     int n;
 
     // clear the screen, write 32 bits a time
     p = (uint32*)fb_ptr;
-    n = (fb_con.wd * fb_con.ht) >> 1;
+    n = (fbcon_lo.wd * fbcon_lo.ht) >> 1;
 
     while (n >= 0) {
         p[n--] = 0x00;
@@ -140,46 +129,28 @@ void clear_screen ()
 }
 
 // write a character at the current poistion
-void con_putc (char c)
+void fb_putc (char c)
 {
-    _con_putc(fb_con.cur_x, fb_con.cur_y, c);
+    _fb_putc(fbcon_lo.cur_x, fbcon_lo.cur_y, c);
 
-    fb_con.cur_x++;
+    fbcon_lo.cur_x++;
 
-    if ((fb_con.cur_x >= fb_con.c_wd) || (c == '\n')) {
-        fb_con.cur_x = 0;
-        fb_con.cur_y++;
+    if ((fbcon_lo.cur_x >= fbcon_lo.c_wd) || (c == '\n')) {
+        fbcon_lo.cur_x = 0;
+        fbcon_lo.cur_y++;
 
-        if (fb_con.cur_y >= fb_con.c_ht) {
-            fb_con.cur_y = 0;
-            clear_screen();
+        if (fbcon_lo.cur_y >= fbcon_lo.c_ht) {
+            fbcon_lo.cur_y = 0;
+            fb_clear();
         }
     }
 }
 
-void con_puts (char *s)
+void fb_puts (char *s)
 {
     while (*s) {
-        con_putc(*s);
+        fb_putc(*s);
         s++;
-    }
-}
-
-void con_putint (char *prefix, uint val, char* suffix)
-{
-    char* arr = "0123456789ABCDEF";
-    int idx;
-
-    if (prefix) {
-        con_puts (prefix);
-    }
-
-    for (idx = sizeof(val) * 8 - 4; idx >= 0; idx -= 4) {
-        con_putc(arr[(val >> idx) & 0x0F]);
-    }
-
-    if (suffix) {
-        con_puts(suffix);
     }
 }
 
@@ -213,14 +184,15 @@ void fb_init ()
     fb.ptr -= 0x40000000; // convert framebuf address to ARM physical addr
 
     // save the info to fb_con, a clear data structure
-    fb_con.wd   = fb.wd;
-    fb_con.ht   = fb.ht;
-    fb_con.ptr  = fb.ptr;
+    fbcon_lo.wd   = fb.wd;
+    fbcon_lo.ht   = fb.ht;
+    fbcon_lo.ptr  = fb.ptr;
+    fbcon_lo.size = fb.size;
     
-    fb_con.c_wd = (fb_con.wd >> CH_XSHIFT);
-    fb_con.c_ht = (fb_con.ht >> CH_YSHIFT);
-    fb_con.cur_x = fb_con.cur_y = 0;
-    fb_ptr = (uint16*)(fb_con.ptr);
+    fbcon_lo.c_wd = (fbcon_lo.wd >> CH_XSHIFT);
+    fbcon_lo.c_ht = (fbcon_lo.ht >> CH_YSHIFT);
+    fbcon_lo.cur_x = fbcon_lo.cur_y = 0;
+    fb_ptr = (uint16*)(fbcon_lo.ptr);
 
-    con_puts ("Frame-buffer based console initialized...");
+    fb_puts ("Frame-buffer based console initialized...\n");
 }

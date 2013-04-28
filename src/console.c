@@ -145,17 +145,10 @@ void consputc (int c)
             ;
     }
 
-    if (c == BACKSPACE) {
-        uartputc('\b');
-        uartputc(' ');
-        uartputc('\b');
-    } else {
-        uartputc(c);
-    }
-
-    // cgaputc(c);
+    cga_putc(c);
 }
 
+/*
 #define INPUT_BUF 512
 struct {
     struct spinlock lock;
@@ -292,3 +285,4 @@ void consoleinit (void)
     cons.locking = 1;
 }
 
+*/

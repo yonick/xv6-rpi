@@ -36,6 +36,7 @@
 #define PDE_MASK    0xFFFFF // offset for page directory entries
 #define PD_SZ       (1 << PDE_SHIFT)
 #define PD_UP(sz)   (((sz) + PD_SZ -1) & ~(PD_SZ -1))
+#define PD_DOWN(sz)   ((sz) & ~(PD_SZ -1))
 
 #define KPD_IDX(v)  ((uint)(v) >> PDE_SHIFT) // index for kernel page table entry
                         // kernel page directory is a 16KB big table (4096 entries)

@@ -5,7 +5,7 @@
 .code 32
 
 .global _start
-.global font_addr
+.global font_img
 
 _start:
     # clear the entry bss section, the svc stack, and kernel page table
@@ -34,5 +34,5 @@ jump_stack:
     MOV     pc, lr
 
 .align 4
-font_addr:
+font_img:
     .incbin "font.bin"

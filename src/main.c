@@ -16,7 +16,7 @@ void kmain (void)
 {
     uint vectbl;
 
-    uart_init (P2V(UART0));
+    cga_init (&fbcon_lo);
 
     // init kernel memory, leave a hole for interrrupt vector table at 0xF0000
     vectbl = P2V_WO (VEC_TBL & PDE_MASK);
@@ -25,13 +25,17 @@ void kmain (void)
         cprintf ("error: vector table overlaps kernel\n");
     }
 
+    cpu = &cpus[0];
+
     kmem_init ();
     kinit2((void*)&end, (void*)vectbl);
     kinit2((void*)(vectbl + PG_SIZE), (void*)(PHYSTOP+KERNBASE));
 
     trap_init ();				// vector table and stacks for models
-    pic_init (P2V(VIC_BASE));	// interrupt controller
-    uart_enable_rx ();			// interrupt for uart
+    //pic_init (P2V(VIC_BASE));	// interrupt controller
+
+    cprintf ("interrupt initialzed");
+    /*
     consoleinit ();				// console
     pinit ();					// process (locks)
 
@@ -47,4 +51,5 @@ void kmain (void)
 
     userinit();					// first user process
     scheduler();				// start running processes
+ */
 }

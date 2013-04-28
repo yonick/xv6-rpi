@@ -6,99 +6,6 @@
 #include "defs.h"
 #include "memlayout.h"
 
-void PUT32 ( uint address, uint val)
-{
-    volatile uint *addr = (uint*)address;
-    *addr = val;
-}
-
-uint GET32 (unsigned int address)
-{
-    volatile uint *addr = (uint*)address;
-    return *addr;
-}
-
-extern void dummy ( unsigned int );
-
-#define ARM_TIMER_LOD 0x2000B400
-#define ARM_TIMER_VAL 0x2000B404
-#define ARM_TIMER_CTL 0x2000B408
-#define ARM_TIMER_CLI 0x2000B40C
-#define ARM_TIMER_RIS 0x2000B410
-#define ARM_TIMER_MIS 0x2000B414
-#define ARM_TIMER_RLD 0x2000B418
-#define ARM_TIMER_DIV 0x2000B41C
-#define ARM_TIMER_CNT 0x2000B420
-
-#define SYSTIMERCLO 0x20003004
-#define GPFSEL1 0x20200004
-#define GPSET0  0x2020001C
-#define GPCLR0  0x20200028
-
-void blink_init ()
-{
-    unsigned int ra;
-
-    ra=GET32(GPFSEL1);
-    ra&=~(7<<18);
-    ra|=1<<18;
-    PUT32(GPFSEL1,ra);
-
-    PUT32(ARM_TIMER_CTL,0x003E0000);
-    PUT32(ARM_TIMER_LOD,1000000-1);
-    PUT32(ARM_TIMER_RLD,1000000-1);
-    PUT32(ARM_TIMER_DIV,0x000000F9);
-    PUT32(ARM_TIMER_CLI,0);
-    PUT32(ARM_TIMER_CTL,0x003E0082);
-}
-
-int blink ( int times )
-{
-    int i;
-
-    for (i = 0; i < times; i++) {
-        PUT32(GPSET0,1<<16);
-        while(1) if(GET32(ARM_TIMER_RIS)) break;
-        PUT32(ARM_TIMER_CLI,0);
-        PUT32(GPCLR0,1<<16);
-        while(1) if(GET32(ARM_TIMER_RIS)) break;
-        PUT32(ARM_TIMER_CLI,0);
-    }
-    
-    return(0);
-}
-
-void _uart_putc(int c)
-{
-
-}
-
-
-void _puts (char *s)
-{
-    while (*s != '\0') {
-        _uart_putc(*s);
-        s++;
-    }
-}
-
-void _putint (char *prefix, uint val, char* suffix)
-{
-    char* arr = "0123456789ABCDEF";
-    int idx;
-
-    if (prefix) {
-        _puts(prefix);
-    }
-
-    for (idx = sizeof(val) * 8 - 4; idx >= 0; idx -= 4) {
-        _uart_putc(arr[(val >> idx) & 0x0F]);
-    }
-
-    if (suffix) {
-        _puts(suffix);
-    }
-}
 
 
 // kernel page table, reserved in the kernel.ld
@@ -172,13 +79,13 @@ void load_pgtlb (uint32* kern_pgtbl, uint32* user_pgtbl)
     asm("MRC p15, 0, %[r], c0, c0, 0": [r]"=r" (ret)::);
 
     if (ret >> 24 == 0x41) {
-        //_puts ("ARM-based CPU\n");
+        //con_puts ("ARM-based CPU\n");
     }
 
     arch = (ret >> 16) & 0x0F;
 
     if ((arch != 7) && (arch != 0xF)) {
-        _puts ("need AARM v6 or higher\n");
+        fb_puts ("need AARM v6 or higher\n");
     }
 
     // we need to check the cache/tlb etc., but let's skip it for now
@@ -219,31 +126,33 @@ extern void * edata;
 extern void * end;
 
 // clear the BSS section for the main kernel, see kernel.ld
-/*void clear_bss (void)
+void clear_bss (void)
 {
     memset(&edata, 0x00, (uint)&end-(uint)&edata);
-}*/
+}
 
 void start (void)
 {
-    //_puts("starting xv6 for ARM...\n");
-    blink_init ();
-    //blink(20);
-
     fb_init();
-/*
+
+    // double map physical memory, required to enable paging
     set_bootpgtbl(0, 0, PHYSTOP, 0);
     set_bootpgtbl(KERNBASE, 0, PHYSTOP, 0);
+
+    // the vector table is located at VEC_TBL
     set_bootpgtbl(VEC_TBL, 0, 1 << PDE_SHIFT, 0);
-    set_bootpgtbl(DEVBASE, DEVBASE, DEV_MEM_SZ, 1);
+
+    // map the device memory
     set_bootpgtbl(KERNBASE+DEVBASE, DEVBASE, DEV_MEM_SZ, 1);
 
+    // map the video memory, be careful with the size
+    set_bootpgtbl(KERNBASE+PD_DOWN(fbcon_lo.ptr), PD_DOWN(fbcon_lo.ptr),
+                  PD_UP(fbcon_lo.ptr + fbcon_lo.size) - PD_DOWN(fbcon_lo.ptr), 1);
+
     load_pgtlb (kernel_pgtbl, user_pgtbl);
-    jump_stack ();
+    jump_stack ();  // move the stack to high memory
 
     // We can now call normal kernel functions at high memory
     clear_bss ();
-
     kmain ();
- */
 }

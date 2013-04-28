@@ -25,8 +25,28 @@ typedef uint32	pte_t;
 typedef uint32  pde_t;
 typedef void (*ISR) (struct trapframe *tf, int n);
 
+struct _fb_con {
+    uint32  wd;     // screen width
+    uint32  ht;     // screen height
+    uint32  c_wd;   // how many characters in a row
+    uint32  c_ht;   // how many lines in a column
+    uint32  cur_x;  // current x position
+    uint32  cur_y;  // current y position
+    uint32  ptr;    // frame buffer address (physical address)
+    uint32  size;   // length of frame buffer
+};
+
+extern struct _fb_con fbcon_lo;
+extern uint32   font_img;  // symbole defined in entry.S
+
 void            fb_init(void);
-int             blink (int times);
+void            fb_puts(char *);
+void            fb_putc (char c);
+void            migrate_fb (uint32 offset);
+
+void cga_putc (char c);
+void cga_init (struct _fb_con*);
+
 // arm.c
 void            set_stk(uint mode, uint addr);
 void            cli (void);

@@ -7,37 +7,36 @@ include makefile.inc
 LIBS=-lgcc
 
 OBJS = \
-    start.o\
-    fb_init.o
-
-#	arm.o\
-#	asm.o\
-#	bio.o\
-#	console.o\
-#	exec.o\
-#	file.o\
-#	fs.o\
-#	kalloc.o\
-#	log.o\
-#	main.o\
-#	memide.o\
-#	picirq.o\
-#	pipe.o\
-#	proc.o\
-#	spinlock.o\	
-#	string.o\
-#	swtch.o\
-#	syscall.o\
-#	sysfile.o\
-#	sysproc.o\
-#	timer.o\
-#	trap_asm.o\
-#	trap.o\
-#	uart.o\
-#	vm.o
+        arm.o\
+        asm.o\
+        bio.o\
+        console.o\
+        cga.o\
+        exec.o\
+        fb_init.o\
+        file.o\
+        fs.o\
+        kalloc.o\
+        log.o\
+        main.o\
+        memide.o\
+        picirq.o\
+        pipe.o\
+        proc.o\
+        spinlock.o\
+        start.o\
+        string.o\
+        swtch.o\
+        syscall.o\
+        sysfile.o\
+        sysproc.o\
+        timer.o\
+        trap_asm.o\
+        trap.o\
+        vm.o
 	
-kernel.elf: $(OBJS) entry.o kernel.ld
-	$(LD) $(LDFLAGS) -T kernel.ld -o kernel.elf entry.o $(OBJS) $(LIBS)
+kernel.elf: $(OBJS) entry.o kernel.ld initcode fs.img
+	$(LD) $(LDFLAGS) -T kernel.ld -o kernel.elf entry.o $(OBJS) $(LIBS) -b binary initcode fs.img
 	$(OBJDUMP) -S kernel.elf > kernel.asm
 	$(OBJDUMP) -t kernel.elf | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
 	$(OBJCOPY)  kernel.elf -O binary kernel.img
