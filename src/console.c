@@ -148,7 +148,7 @@ void consputc (int c)
     cga_putc(c);
 }
 
-/*
+
 #define INPUT_BUF 512
 struct {
     struct spinlock lock;
@@ -284,5 +284,3 @@ void consoleinit (void)
 
     cons.locking = 1;
 }
-
-*/

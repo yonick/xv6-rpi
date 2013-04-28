@@ -65,8 +65,8 @@ static void _flush_all (void)
     asm("MCR p15, 0, %[r], c8, c7, 0" : :[r]"r" (val):);
 
     // invalid entire data and instruction cache
-    // asm ("MCR p15,0,%[r],c7,c5,0": :[r]"r" (val):);
-    // asm ("MCR p15,0,%[r],c7,c6,0": :[r]"r" (val):);
+    asm ("MCR p15,0,%[r],c7,c10,0": :[r]"r" (val):);
+    asm ("MCR p15,0,%[r],c7,c11,0": :[r]"r" (val):);
 }
 
 void load_pgtlb (uint32* kern_pgtbl, uint32* user_pgtbl)
@@ -79,7 +79,7 @@ void load_pgtlb (uint32* kern_pgtbl, uint32* user_pgtbl)
     asm("MRC p15, 0, %[r], c0, c0, 0": [r]"=r" (ret)::);
 
     if (ret >> 24 == 0x41) {
-        //con_puts ("ARM-based CPU\n");
+        fb_puts ("ARM-based CPU\n");
     }
 
     arch = (ret >> 16) & 0x0F;

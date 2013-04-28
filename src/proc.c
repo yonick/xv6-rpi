@@ -43,6 +43,20 @@ void pinit(void)
     initlock(&ptable.lock, "ptable");
 }
 
+void dump_context (struct context *ctx)
+{
+    cprintf(" r4: 0x%x\n", ctx->r4);
+    cprintf(" r5: 0x%x\n", ctx->r5);
+    cprintf(" r6: 0x%x\n", ctx->r6);
+    cprintf(" r7: 0x%x\n", ctx->r7);
+    cprintf(" r8: 0x%x\n", ctx->r8);
+    cprintf(" r9: 0x%x\n", ctx->r9);
+    cprintf("r10: 0x%x\n", ctx->r10);
+    cprintf("r11: 0x%x\n", ctx->r11);
+    cprintf("r12: 0x%x\n", ctx->r12);
+    cprintf(" lr: 0x%x\n", ctx->lr);
+}
+
 //PAGEBREAK: 32
 // Look in the process table for an UNUSED proc.
 // If found, change state to EMBRYO and initialize
@@ -334,15 +348,25 @@ void scheduler(void)
                 continue;
             }
 
+            cprintf("runnable process: %s(pgd[0]: 0x%x)\n", p->name, p->pgdir[0]);
+            cprintf ("0x8000: %x\n", *((uint32*)0x8000));
+            
             // Switch to chosen process.  It is the process's job
             // to release ptable.lock and then reacquire it
             // before jumping back to us.
             proc = p;
             switchuvm(p);
 
+            cprintf("vm switeched to context 0x%x->0x%x\n", proc, proc->context);
+            dump_context(proc->context);
+
+            cprintf ("0x8000: %x\n", *((uint32*)0x8000));
+            
             p->state = RUNNING;
 
             swtch(&cpu->scheduler, proc->context);
+
+            cprintf ("return from swtch\n");
             // Process is done running for now.
             // It should have changed its p->state before coming back.
             proc = 0;

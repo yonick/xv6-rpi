@@ -33,7 +33,7 @@ void init_vmm (void)
 static void kpt_free (char *v)
 {
     struct run *r;
-
+    
     acquire(&kpt_mem.lock);
 
     r = (struct run*) v;
@@ -144,12 +144,16 @@ static void flush_tlb (void)
 {
     uint val = 0;
     asm("MCR p15, 0, %[r], c8, c7, 0" : :[r]"r" (val):);
+    
+    // invalid entire data and instruction cache
+    asm ("MCR p15,0,%[r],c7,c10,0": :[r]"r" (val):);
+    asm ("MCR p15,0,%[r],c7,c11,0": :[r]"r" (val):);
 }
 
 // Switch to the user page table (TTBR0)
 void switchuvm (struct proc *p)
 {
-    uint val;
+    uint32 val;
 
     pushcli();
 
@@ -157,7 +161,7 @@ void switchuvm (struct proc *p)
         panic("switchuvm: no pgdir");
     }
 
-    val = (uint) V2P(p->pgdir) | 0x00;
+    val = (uint32) V2P(p->pgdir) | 0x00;
 
     asm("MCR p15, 0, %[v], c2, c0, 0": :[v]"r" (val):);
     flush_tlb();

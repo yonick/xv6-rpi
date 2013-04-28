@@ -15,16 +15,21 @@
 
 #define STACK_FILL      0xdeadbeef
 
-#define TIMER0          0x101E2000
-#define TIMER1          0x101E2020
-
+#define SYSTIMER_BASE   0x20003000
 #define CLK_HZ          1000000     // the clock is 1MHZ
 
 // Interrupt controller and interrupt source
-#define VIC_BASE        0x10140000
-#define PIC_TIMER01     4
-#define PIC_TIMER23     5
-#define PIC_UART0       12
-#define PIC_GRAPHIC     19
+#define VIC_BASE        0x2000B200
+
+#define PIC_TIMER0      0
+#define PIC_MBOX        1
+#define PIC_DOORBELL0   2
+#define PIC_DOORBELL1   3
+#define PIC_GPU0        4
+#define PIC_GPU1        5
+#define PIC_ILLEGAL0    7
+#define PIC_ILLEGAL1    6
+
+#define SYS_TIMER3      35
 
 #endif

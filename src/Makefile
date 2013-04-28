@@ -20,7 +20,7 @@ OBJS = \
         log.o\
         main.o\
         memide.o\
-        picirq.o\
+        picirq_pi.o\
         pipe.o\
         proc.o\
         spinlock.o\
@@ -30,7 +30,7 @@ OBJS = \
         syscall.o\
         sysfile.o\
         sysproc.o\
-        timer.o\
+        timer_pi.o\
         trap_asm.o\
         trap.o\
         vm.o

@@ -32,24 +32,21 @@ void kmain (void)
     kinit2((void*)(vectbl + PG_SIZE), (void*)(PHYSTOP+KERNBASE));
 
     trap_init ();				// vector table and stacks for models
-    //pic_init (P2V(VIC_BASE));	// interrupt controller
+    pic_init (P2V(VIC_BASE));	// interrupt controller
 
-    cprintf ("interrupt initialzed");
-    /*
     consoleinit ();				// console
     pinit ();					// process (locks)
-
+    
     binit ();					// buffer cache
     fileinit ();				// file table
     iinit ();					// inode cache
     ideinit ();					// ide (memory block device)
-    timer_init (HZ);			// the timer (ticker)
-
+    
     init_vmm ();
-    cpu = &cpus[0];
+    
+    timer_init (HZ);			// the timer (ticker)
     sti ();
 
     userinit();					// first user process
-    scheduler();				// start running processes
- */
+ //   scheduler();				// start running processes
 }
