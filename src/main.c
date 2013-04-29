@@ -12,6 +12,11 @@ extern void* end;
 struct cpu	cpus[NCPU];
 struct cpu	*cpu;
 
+void info (void)
+{
+    cprintf ("Start xv6 for Raspberry Pi...\n\n\n");
+}
+
 void kmain (void)
 {
     uint vectbl;
@@ -45,8 +50,10 @@ void kmain (void)
     ideinit ();					// ide (memory block device)
 
     timer_init (HZ);			// the timer (ticker)
-
     sti ();
+
+    info ();
+
     userinit();					// first user process
- //   scheduler();				// start running processes
+    scheduler();				// start running processes
 }

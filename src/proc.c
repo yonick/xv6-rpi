@@ -335,7 +335,7 @@ int wait(void)
 void scheduler(void)
 {
     struct proc *p;
-
+    
     for(;;){
         // Enable interrupts on this processor.
         sti();
@@ -348,25 +348,15 @@ void scheduler(void)
                 continue;
             }
 
-            cprintf("runnable process: %s(pgd[0]: 0x%x)\n", p->name, p->pgdir[0]);
-            cprintf ("0x8000: %x\n", *((uint32*)0x8000));
-            
             // Switch to chosen process.  It is the process's job
             // to release ptable.lock and then reacquire it
             // before jumping back to us.
             proc = p;
             switchuvm(p);
 
-            cprintf("vm switeched to context 0x%x->0x%x\n", proc, proc->context);
-            dump_context(proc->context);
-
-            cprintf ("0x8000: %x\n", *((uint32*)0x8000));
-            
             p->state = RUNNING;
-
             swtch(&cpu->scheduler, proc->context);
 
-            cprintf ("return from swtch\n");
             // Process is done running for now.
             // It should have changed its p->state before coming back.
             proc = 0;

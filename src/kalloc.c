@@ -71,7 +71,7 @@ void kfree(char *v)
     }
 
     // Fill with junk to catch dangling refs.
-    //memset(v, 0x00, PG_SIZE);
+    memset(v, 0x00, PTE_SZ);
 
     if(kmem.use_lock) {
         acquire(&kmem.lock);

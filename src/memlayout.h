@@ -18,5 +18,5 @@ static inline void *p2v(uint a) { return (void *) ((a) + KERNBASE); }
 #define V2P(a) (((uint) (a)) - KERNBASE)
 #define P2V(a) (((void *) (a)) + KERNBASE)
 
-#define _V2P(x) ((x) - KERNBASE)    // same as V2P, but without casts
-#define _P2V(x) ((x) + KERNBASE)    // same as V2P, but without casts
+#define _V2P(x) ((uint)(x) - KERNBASE)    // same as V2P, but without casts
+#define _P2V(x) ((uint)(x) + KERNBASE)    // same as V2P, but without casts

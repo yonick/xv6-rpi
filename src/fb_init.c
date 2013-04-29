@@ -194,5 +194,5 @@ void fb_init ()
     fbcon_lo.cur_x = fbcon_lo.cur_y = 0;
     fb_ptr = (uint16*)(fbcon_lo.ptr);
 
-    fb_puts ("Frame-buffer based console initialized...\n");
+    //fb_puts ("Frame-buffer initialized...\n");
 }

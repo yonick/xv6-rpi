@@ -41,16 +41,32 @@ void und_handler (struct trapframe *r)
 // trap routine
 void dabort_handler (struct trapframe *r)
 {
+    uint dfs, fa;
+
     cli();
-    cprintf ("data abort at: 0x%x \n", r->pc);
+
+    // read data fault status register
+    asm("MRC p15, 0, %[r], c5, c0, 0": [r]"=r" (dfs)::);
+
+    // read the fault address register
+    asm("MRC p15, 0, %[r], c6, c0, 0": [r]"=r" (fa)::);
+    
+    cprintf ("data abort: instruction 0x%x, fault addr 0x%x, reason 0x%x \n",
+             r->pc, fa, dfs);
+    
     dump_trapframe (r);
 }
 
 // trap routine
 void iabort_handler (struct trapframe *r)
 {
+    uint ifs;
+    
+    // read fault status register
+    asm("MRC p15, 0, %[r], c5, c0, 0": [r]"=r" (ifs)::);
+
     cli();
-    cprintf ("prefetch abort at: 0x%x \n", r->pc);
+    cprintf ("prefetch abort at: 0x%x (reason: 0x%x)\n", r->pc, ifs);
     dump_trapframe (r);
 }
 

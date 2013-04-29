@@ -80,7 +80,7 @@ void load_pgtlb (uint32* kern_pgtbl, uint32* user_pgtbl)
     asm("MRC p15, 0, %[r], c0, c0, 0": [r]"=r" (ret)::);
 
     if (ret >> 24 == 0x41) {
-        fb_puts ("ARM-based CPU\n");
+        //fb_puts ("ARM-based CPU\n");
     }
 
     arch = (ret >> 16) & 0x0F;

@@ -31,6 +31,7 @@
 #define PE_BUF      (1 << 2)// bufferable
 
 #define PE_TYPES    0x03    // mask for page type
+
 #define KPDE_TYPE   0x02    // use "section" type for kernel page directory
 #define UPDE_TYPE   0x01    // use "coarse page table" for user page directory
 #define PTE_TYPE    0x02    // executable user page(subpage disable)

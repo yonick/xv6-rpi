@@ -174,7 +174,7 @@ void switchuvm (struct proc *p)
         panic("switchuvm: no pgdir");
     }
 
-    val = (uint32) V2P(p->pgdir) | 0x00;
+    val = _V2P(p->pgdir) | 0x01;
 
     asm("MCR p15, 0, %[v], c2, c0, 0": :[v]"r" (val):);
     flush_tlb();
