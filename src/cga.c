@@ -21,7 +21,7 @@ static uint16*  fb_ptr;
 void cga_init (struct _fb_con *fbcon_lo)
 {
     fbcon_hi = *fbcon_lo;
-    fbcon_hi.ptr = P2V_WO(fbcon_hi.ptr);
+    fbcon_hi.ptr = _P2V(fbcon_hi.ptr);
     fonts = P2V(&font_img);
     fb_ptr = (uint16*)fbcon_hi.ptr;
 }

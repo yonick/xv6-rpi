@@ -46,7 +46,7 @@ void set_bootpgtbl (uint32 virt, uint32 phy, uint len, int dev_mem )
         }
 
         // use different page table for user/kernel space
-        if (virt < NPD_ENTRIES) {
+        if (virt < NUM_UPDE) {
             user_pgtbl[virt] = pde;
         } else {
             kernel_pgtbl[virt] = pde;
@@ -111,7 +111,7 @@ void load_pgtlb (uint32* kern_pgtbl, uint32* user_pgtbl)
     asm("MRC p15, 0, %[r], c1, c0, 0": [r]"=r" (val)::);
 
     val |= 0x80300D; // enable MMU, cache, write buffer, high vector tbl,
-    // disable subpage
+                     // disable subpage
     asm("MCR p15, 0, %[r], c1, c0, 0": :[r]"r" (val):);
 
     _flush_all();
@@ -133,12 +133,23 @@ void clear_bss (void)
 
 void start (void)
 {
+    uint32  vectbl;
+    uint32  fb_lo, fb_hi;
+    
+
     fb_init();
 
     // double map physical memory, required to enable paging
-    set_bootpgtbl(0, 0, PHYSTOP, 0);
-    set_bootpgtbl(KERNBASE, 0, PHYSTOP, 0);
+    set_bootpgtbl(0, 0, INIT_KERNMAP, 0);
+    set_bootpgtbl(KERNBASE, 0, INIT_KERNMAP, 0);
 
+    // vector table is in the middle of first 1MB (0xF000)
+    vectbl = _P2V (VEC_TBL & PDE_MASK);
+
+    if (vectbl <= (uint)&end) {
+        cprintf ("error: vector table overlaps kernel\n");
+    }
+    
     // the vector table is located at VEC_TBL
     set_bootpgtbl(VEC_TBL, 0, 1 << PDE_SHIFT, 0);
 
@@ -146,13 +157,15 @@ void start (void)
     set_bootpgtbl(KERNBASE+DEVBASE, DEVBASE, DEV_MEM_SZ, 1);
 
     // map the video memory, be careful with the size
-    set_bootpgtbl(KERNBASE+PD_DOWN(fbcon_lo.ptr), PD_DOWN(fbcon_lo.ptr),
-                  PD_UP(fbcon_lo.ptr + fbcon_lo.size) - PD_DOWN(fbcon_lo.ptr), 1);
+    fb_lo = _P2V (align_dn(fbcon_lo.ptr, PDE_SZ));
+    fb_hi = _P2V (align_up(fbcon_lo.ptr+ fbcon_lo.size, PDE_SZ));
+    set_bootpgtbl(fb_lo, align_dn(fbcon_lo.ptr, PDE_SZ), fb_hi - fb_lo, 1);
 
     load_pgtlb (kernel_pgtbl, user_pgtbl);
     jump_stack ();  // move the stack to high memory
 
     // We can now call normal kernel functions at high memory
     clear_bss ();
+
     kmain ();
 }

@@ -23,6 +23,7 @@ struct trapframe;
 
 typedef uint32	pte_t;
 typedef uint32  pde_t;
+extern  uint32  _kernel_pgtbl;
 typedef void (*ISR) (struct trapframe *tf, int n);
 
 struct _fb_con {
@@ -212,4 +213,6 @@ int             copyout(pde_t*, uint, void*, uint);
 void            clearpteu(pde_t *pgdir, char *uva);
 void*           kpt_alloc(void);
 void            init_vmm (void);
+void            kpt_freerange (uint32 low, uint32 hi);
+void            paging_init (uint phy_low, uint phy_hi);
 #endif

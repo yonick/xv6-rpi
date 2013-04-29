@@ -16,20 +16,22 @@ void kmain (void)
 {
     uint vectbl;
 
+    cpu = &cpus[0];
     cga_init (&fbcon_lo);
 
-    // init kernel memory, leave a hole for interrrupt vector table at 0xF0000
-    vectbl = P2V_WO (VEC_TBL & PDE_MASK);
+    // interrrupt vector table is in the middle of first 1MB. We use the left
+    // over for page tables
+    vectbl = _P2V (VEC_TBL & PDE_MASK);
+    init_vmm ();
+    kpt_freerange (align_up(&end, PT_SZ), vectbl);
+    kpt_freerange (vectbl + PT_SZ, _P2V(INIT_KERNMAP));
 
-    if (vectbl <= (uint)&end) {
-        cprintf ("error: vector table overlaps kernel\n");
-    }
+    paging_init (INIT_KERNMAP, PHYSTOP);
 
     cpu = &cpus[0];
 
     kmem_init ();
-    kinit2((void*)&end, (void*)vectbl);
-    kinit2((void*)(vectbl + PG_SIZE), (void*)(PHYSTOP+KERNBASE));
+    kinit2(P2V(INIT_KERNMAP), P2V(PHYSTOP));
 
     trap_init ();				// vector table and stacks for models
     pic_init (P2V(VIC_BASE));	// interrupt controller
@@ -41,12 +43,10 @@ void kmain (void)
     fileinit ();				// file table
     iinit ();					// inode cache
     ideinit ();					// ide (memory block device)
-    
-    init_vmm ();
-    
-    timer_init (HZ);			// the timer (ticker)
-    sti ();
 
+    timer_init (HZ);			// the timer (ticker)
+
+    sti ();
     userinit();					// first user process
  //   scheduler();				// start running processes
 }
