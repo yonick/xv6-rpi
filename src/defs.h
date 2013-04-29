@@ -47,6 +47,8 @@ void            migrate_fb (uint32 offset);
 
 void cga_putc (char c);
 void cga_init (struct _fb_con*);
+extern void kmain (void);
+extern void jump_stack (void);
 
 // arm.c
 void            set_stk(uint mode, uint addr);

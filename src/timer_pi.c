@@ -46,11 +46,9 @@ void timer_init(int hz)
 
     initlock(&tickslock, "time");
     pic_enable (SYS_TIMER3, isr_timer);
-    // need to enable the timer interrupt
-    
-    inc = CLK_HZ / hz;
 
     // set the comparison register
+    inc = CLK_HZ / hz;
     stc_base[STC_TIMER3] = stc_base[STC_COUNTERLO] + inc;
 }
 

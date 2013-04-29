@@ -54,7 +54,6 @@ void iabort_handler (struct trapframe *r)
     dump_trapframe (r);
 }
 
-
 // trap routine
 void na_handler (struct trapframe *r)
 {

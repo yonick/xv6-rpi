@@ -7,15 +7,16 @@
 #include "memlayout.h"
 
 
-
 // kernel page table, reserved in the kernel.ld
-extern uint32 _kernel_pgtbl;
-extern uint32 _user_pgtbl;
+extern uint32   _kernel_pgtbl;
+extern uint32   _user_pgtbl;
+extern void *   edata_entry;
+extern void *   svc_stktop;
+extern void *   edata;
+extern void *   end;
 
-uint32 *kernel_pgtbl = &_kernel_pgtbl;
-uint32 *user_pgtbl = &_user_pgtbl;
-
-#define PDE_SHIFT 20
+uint32          *kernel_pgtbl = &_kernel_pgtbl;
+uint32          *user_pgtbl = &_user_pgtbl;
 
 uint32 get_pde (uint32 virt)
 {
@@ -116,14 +117,6 @@ void load_pgtlb (uint32* kern_pgtbl, uint32* user_pgtbl)
 
     _flush_all();
 }
-
-extern void * edata_entry;
-extern void * svc_stktop;
-extern void kmain (void);
-extern void jump_stack (void);
-
-extern void * edata;
-extern void * end;
 
 // clear the BSS section for the main kernel, see kernel.ld
 void clear_bss (void)
