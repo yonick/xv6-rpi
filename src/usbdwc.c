@@ -13,42 +13,42 @@
  * keyboard, mouse, ethernet adapter, and an external flash drive.
  */
 
-#include	"u.h"
-#include	"../port/lib.h"
-#include	"mem.h"
-#include	"dat.h"
-#include	"fns.h"
-#include	"io.h"
-#include	"../port/error.h"
-#include	"../port/usb.h"
-
+#include "types.h"
+#include "param.h"
+#include "arm.h"
+#include "mmu.h"
+#include "defs.h"
+#include "memlayout.h"
+#include "usb.h"
+#include "spinlock.h"
 #include "dwcotg.h"
+
 
 enum
 {
-	USBREGS		= VIRTIO + 0x980000,
-	Enabledelay	= 50,
-	Resetdelay	= 10,
+	USBREGS         = P2V(0x20980000), // @ physical address 0x20980000
+	Enabledelay     = 50,
+	Resetdelay      = 10,
 	ResetdelayHS	= 50,
 
-	Read		= 0,
-	Write		= 1,
+	Read            = 0,
+	Write           = 1,
 };
 
 typedef struct Ctlr Ctlr;
 typedef struct Epio Epio;
 
 struct Ctlr {
-	Dwcregs	*regs;		/* controller registers */
-	int	nchan;		/* number of host channels */
-	ulong	chanbusy;	/* bitmap of in-use channels */
-	QLock	chanlock;	/* serialise access to chanbusy */
-	QLock	split;		/* serialise split transactions */
-	int	splitretry;	/* count retries of Nyet */
-	int	sofchan;	/* bitmap of channels waiting for sof */
-	int	wakechan;	/* bitmap of channels to wakeup after fiq */
-	int	debugchan;	/* bitmap of channels for interrupt debug */
-	Rendez	*chanintr;	/* sleep till interrupt on channel N */
+	Dwcregs         *regs;  /* controller registers */
+	int              nchan; /* number of host channels */
+	ulong            chanbusy; /* bitmap of in-use channels */
+	struct spinlock  chanlock; /* serialise access to chanbusy */
+	struct spinlock  split;	/* serialise split transactions */
+	int              splitretry; /* count retries of Nyet */
+	int              sofchan; /* bitmap of channels waiting for sof */
+	int              wakechan; /* bitmap of channels to wakeup after fiq */
+	int              debugchan; /* bitmap of channels for interrupt debug */
+	Rendez          *chanintr; /* sleep till interrupt on channel N */
 };
 
 struct Epio {
