@@ -52,9 +52,9 @@ struct Ctlr {
 };
 
 struct Epio {
-	QLock;
-	Block	*cb;
-	ulong	lastpoll;
+	struct spinlock lock;
+	Block           *cb;
+	ulong           lastpoll;
 };
 
 static Ctlr dwc;
@@ -73,16 +73,22 @@ chanalloc(Ep *ep)
 	int bitmap, i;
 
 	ctlr = ep->hp->aux;
-	qlock(&ctlr->chanlock);
-	bitmap = ctlr->chanbusy;
-	for(i = 0; i < ctlr->nchan; i++)
+
+    qlock(&ctlr->chanlock);
+
+    bitmap = ctlr->chanbusy;
+
+    for(i = 0; i < ctlr->nchan; i++) {
 		if((bitmap & (1<<i)) == 0){
 			ctlr->chanbusy = bitmap | 1<<i;
 			qunlock(&ctlr->chanlock);
 			return &ctlr->regs->hchan[i];
 		}
+    }
+
 	qunlock(&ctlr->chanlock);
-	panic("miller is a lazy git");
+
+    panic("miller is a lazy git");
 	return nil;
 }
 
@@ -94,7 +100,8 @@ chanrelease(Ep *ep, Hostchan *chan)
 
 	ctlr = ep->hp->aux;
 	i = chan - ctlr->regs->hchan;
-	qlock(&ctlr->chanlock);
+
+    qlock(&ctlr->chanlock);
 	ctlr->chanbusy &= ~(1<<i);
 	qunlock(&ctlr->chanlock);
 }
@@ -102,50 +109,64 @@ chanrelease(Ep *ep, Hostchan *chan)
 static void
 chansetup(Hostchan *hc, Ep *ep)
 {
-	int hcc;
-	Ctlr *ctlr = ep->hp->aux;
+	int     hcc;
+	Ctlr    *ctlr;
 
-	if(ep->debug)
+    ctrl = ep->hp->aux;
+
+	if(ep->debug) {
 		ctlr->debugchan |= 1 << (hc - ctlr->regs->hchan);
-	else
+	} else {
 		ctlr->debugchan &= ~(1 << (hc - ctlr->regs->hchan));
+    }
+
 	switch(ep->dev->state){
-        case Dconfig:
-        case Dreset:
-            hcc = 0;
-            break;
-        default:
-            hcc = ep->dev->nb<<ODevaddr;
-            break;
+    case Dconfig:
+    case Dreset:
+        hcc = 0;
+        break;
+
+    default:
+        hcc = ep->dev->nb<<ODevaddr;
+        break;
 	}
+
 	hcc |= ep->maxpkt | 1<<OMulticnt | ep->nb<<OEpnum;
+    
 	switch(ep->ttype){
-        case Tctl:
-            hcc |= Epctl;
-            break;
-        case Tiso:
-            hcc |= Episo;
-            break;
-        case Tbulk:
-            hcc |= Epbulk;
-            break;
-        case Tintr:
-            hcc |= Epintr;
-            break;
+    case Tctl:
+        hcc |= Epctl;
+        break;
+        
+    case Tiso:
+        hcc |= Episo;
+        break;
+        
+    case Tbulk:
+        hcc |= Epbulk;
+        break;
+        
+    case Tintr:
+        hcc |= Epintr;
+        break;
 	}
+
 	switch(ep->dev->speed){
-        case Lowspeed:
-            hcc |= Lspddev;
-            /* fall through */
-        case Fullspeed:
-            hc->hcsplt = Spltena | POS_ALL | ep->dev->hub<<OHubaddr |
-			ep->dev->port;
-            break;
-        default:
-            hc->hcsplt = 0;
-            break;
+    case Lowspeed:
+        hcc |= Lspddev;
+        /* fall through */
+
+    case Fullspeed:
+        hc->hcsplt = Spltena | POS_ALL | ep->dev->hub<<OHubaddr |
+        ep->dev->port;
+        break;
+
+    default:
+        hc->hcsplt = 0;
+        break;
 	}
-	hc->hcchar = hcc;
+
+    hc->hcchar = hcc;
 	hc->hcint = ~0;
 }
 
@@ -165,14 +186,19 @@ sofwait(Ctlr *ctlr, int n)
 	int x;
 
 	r = ctlr->regs;
+    
 	do{
 		r->gintsts = Sofintr;
+        
 		x = splfhi();
-		ctlr->sofchan |= 1<<n;
+
+        ctlr->sofchan |= 1<<n;
 		r->gintmsk |= Sofintr;
 		sleep(&ctlr->chanintr[n], sofdone, r);
-		splx(x);
-	}while((r->hfnum & 7) == 6);
+        
+        splx(x);
+        
+    }while((r->hfnum & 7) == 6);
 }
 
 static int
@@ -193,44 +219,61 @@ chanwait(Ep *ep, Ctlr *ctlr, Hostchan *hc, int mask)
 
 	r = ctlr->regs;
 	n = hc - r->hchan;
+    
 	for(;;){
+        
     restart:
 		x = splfhi();
+        
 		r->haintmsk |= 1<<n;
 		hc->hcintmsk = mask;
 		sleep(&ctlr->chanintr[n], chandone, hc);
 		hc->hcintmsk = 0;
-		splx(x);
+
+        splx(x);
+
 		intr = hc->hcint;
-		if(intr & Chhltd)
+
+        if(intr & Chhltd) {
 			return intr;
-		start = fastticks(0);
+        }
+
+        start = fastticks(0);
 		ointr = intr;
 		now = start;
+        
 		do{
 			intr = hc->hcint;
+
 			if(intr & Chhltd){
-				if((ointr != Ack && ointr != (Ack|Xfercomp)) ||
-				   intr != (Ack|Chhltd|Xfercomp) ||
-				   (now - start) > 60)
+				if(((ointr != Ack) && (ointr != (Ack|Xfercomp))) ||
+				   (intr != (Ack|Chhltd|Xfercomp)) || ((now - start) > 60)) {
 					dprint("await %x after %ld %x -> %x\n",
                            mask, now - start, ointr, intr);
+                }
+                
 				return intr;
 			}
+            
 			if((intr & mask) == 0){
 				dprint("ep%d.%d await %x intr %x -> %x\n",
                        ep->dev->nb, ep->nb, mask, ointr, intr);
+
 				goto restart;
 			}
+            
 			now = fastticks(0);
-		}while(now - start < 100);
+		} while(now - start < 100);
+
 		dprint("ep%d.%d halting channel %8.8ux hcchar %8.8ux "
                "grxstsr %8.8ux gnptxsts %8.8ux hptxsts %8.8ux\n",
                ep->dev->nb, ep->nb, intr, hc->hcchar, r->grxstsr,
                r->gnptxsts, r->hptxsts);
+        
 		mask = Chhltd;
 		hc->hcchar |= Chdis;
 		start = m->ticks;
+        
 		while(hc->hcchar & Chen){
 			if(m->ticks - start >= 100){
 				print("ep%d.%d channel won't halt hcchar %8.8ux\n",
@@ -238,6 +281,7 @@ chanwait(Ep *ep, Ctlr *ctlr, Hostchan *hc, int mask)
 				break;
 			}
 		}
+
 		logdump(ep);
 	}
 }
@@ -249,31 +293,47 @@ chanintr(Ctlr *ctlr, int n)
 	int i;
 
 	hc = &ctlr->regs->hchan[n];
-	if(ctlr->debugchan & (1<<n))
+    
+	if(ctlr->debugchan & (1<<n)) {
 		clog(nil, hc);
-	if((hc->hcsplt & Spltena) == 0)
+    }
+    
+	if((hc->hcsplt & Spltena) == 0) {
 		return 0;
+    }
+
 	i = hc->hcint;
-	if(i == (Chhltd|Ack)){
+
+    if(i == (Chhltd|Ack)){
 		hc->hcsplt |= Compsplt;
 		ctlr->splitretry = 0;
-	}else if(i == (Chhltd|Nyet)){
-		if(++ctlr->splitretry >= 3)
+        
+    }else if(i == (Chhltd|Nyet)){
+		if(++ctlr->splitretry >= 3) {
 			return 0;
-	}else
-		return 0;
+        }
+        
+	}else {
+ 		return 0;
+    }
+    
 	if(hc->hcchar & Chen){
 		iprint("hcchar %8.8ux hcint %8.8ux", hc->hcchar, hc->hcint);
+
 		hc->hcchar |= Chen | Chdis;
-		while(hc->hcchar&Chen)
-			;
-		iprint(" %8.8ux\n", hc->hcint);
+		while(hc->hcchar&Chen);
+
+        iprint(" %8.8ux\n", hc->hcint);
 	}
+    
 	hc->hcint = i;
-	if(ctlr->regs->hfnum & 1)
+    
+	if(ctlr->regs->hfnum & 1) {
 		hc->hcchar &= ~Oddfrm;
-	else
+	} else {
 		hc->hcchar |= Oddfrm;
+    }
+    
 	hc->hcchar = (hc->hcchar &~ Chdis) | Chen;
 	return 1;
 }
@@ -284,8 +344,9 @@ static int nchanlog;
 static void
 logstart(Ep *ep)
 {
-	if(ep->debug)
+	if(ep->debug) {
 		nchanlog = 0;
+    }
 }
 
 static void
@@ -293,10 +354,14 @@ clog(Ep *ep, Hostchan *hc)
 {
 	Reg *p;
 
-	if(ep != nil && !ep->debug)
+	if(ep != nil && !ep->debug) {
 		return;
-	if(nchanlog == 32)
+    }
+    
+	if(nchanlog == 32) {
 		nchanlog--;
+    }
+    
 	p = chanlog[nchanlog];
 	p[0] = dwc.regs->hfnum;
 	p[1] = hc->hcchar;
@@ -312,14 +377,18 @@ logdump(Ep *ep)
 	Reg *p;
 	int i;
 
-	if(!ep->debug)
+	if(!ep->debug) {
 		return;
+    }
+    
 	p = chanlog[0];
+    
 	for(i = 0; i < nchanlog; i++){
 		print("%5.5d.%5.5d %8.8ux %8.8ux %8.8ux %8.8ux\n",
               p[0]&0xFFFF, p[0]>>16, p[1], p[2], p[3], p[4]);
 		p += 5;
 	}
+    
 	nchanlog = 0;
 }
 
@@ -331,55 +400,82 @@ chanio(Ep *ep, Hostchan *hc, int dir, int pid, void *a, int len)
 	uint hcdma, hctsiz;
 
 	ctlr = ep->hp->aux;
+
+    // count how many packets to send: all packets in a transaction
+    // must be of the max packate size unless the last one
 	maxpkt = ep->maxpkt;
 	npkt = HOWMANY(len, ep->maxpkt);
-	if(npkt == 0)
+	if(npkt == 0) {
 		npkt = 1;
+    }
 
 	hc->hcchar = (hc->hcchar & ~Epdir) | dir;
-	if(dir == Epin)
+	if(dir == Epin) {
 		n = ROUND(len, ep->maxpkt);
-	else
+	} else {
 		n = len;
-	hc->hctsiz = n | npkt<<OPktcnt | pid;
-	hc->hcdma  = PADDR(a);
+    }
+
+	hc->hctsiz = n | (npkt<<OPktcnt) | pid; //transfer size(pid: packet id)
+	hc->hcdma  = PADDR(a); 
 
 	nleft = len;
 	logstart(ep);
+    
 	for(;;){
 		hcdma = hc->hcdma;
 		hctsiz = hc->hctsiz;
 		hc->hctsiz = hctsiz & ~Dopng;
+
+        // channel must be disabled first before use
 		if(hc->hcchar&Chen){
 			dprint("ep%d.%d before chanio hcchar=%8.8ux\n",
                    ep->dev->nb, ep->nb, hc->hcchar);
+            
 			hc->hcchar |= Chen | Chdis;
-			while(hc->hcchar&Chen)
-				;
+			while(hc->hcchar&Chen);
 			hc->hcint = Chhltd;
 		}
+
+        // ack the pending interrupt
 		if((i = hc->hcint) != 0){
 			dprint("ep%d.%d before chanio hcint=%8.8ux\n",
                    ep->dev->nb, ep->nb, i);
 			hc->hcint = i;
 		}
+
+        // split transaction, 
 		if(hc->hcsplt & Spltena){
 			qlock(&ctlr->split);
+            
 			sofwait(ctlr, hc - ctlr->regs->hchan);
-			if((dwc.regs->hfnum & 1) == 0)
+            
+			if((dwc.regs->hfnum & 1) == 0) {
 				hc->hcchar &= ~Oddfrm;
-			else
+			} else {
 				hc->hcchar |= Oddfrm;
+            }
 		}
+
+        // enable channel
 		hc->hcchar = (hc->hcchar &~ Chdis) | Chen;
+
 		clog(ep, hc);
-		if(ep->ttype == Tbulk && dir == Epin)
+
+        // wait channel to halt (complete)
+        if(ep->ttype == Tbulk && dir == Epin) {
 			i = chanwait(ep, ctlr, hc, /* Ack| */ Chhltd);
-		else if(ep->ttype == Tintr && (hc->hcsplt & Spltena))
+
+        } else if(ep->ttype == Tintr && (hc->hcsplt & Spltena)) {
 			i = chanwait(ep, ctlr, hc, Chhltd);
-		else
+
+        } else {
 			i = chanwait(ep, ctlr, hc, Chhltd|Nak);
+        }
+
 		clog(ep, hc);
+
+        // ack the interrupt
 		hc->hcint = i;
 
 		if(hc->hcsplt & Spltena){
@@ -387,61 +483,95 @@ chanio(Ep *ep, Hostchan *hc, int dir, int pid, void *a, int len)
 			qunlock(&ctlr->split);
 		}
 
+        // check results, error cases
 		if((i & Xfercomp) == 0 && i != (Chhltd|Ack) && i != Chhltd){
-			if(i & Stall)
+			if(i & Stall) {
 				error(Estalled);
-			if(i & Nyet)
+            }
+            
+			if(i & Nyet) {
 				continue;
+            }
+            
 			if(i & Nak){
-				if(ep->ttype == Tintr)
+				if(ep->ttype == Tintr) {
 					tsleep(&up->sleep, return0, 0, ep->pollival);
-				else
+				} else {
 					tsleep(&up->sleep, return0, 0, 1);
+                }
+                
 				continue;
 			}
+
+            
 			print("usbotg: ep%d.%d error intr %8.8ux\n",
                   ep->dev->nb, ep->nb, i);
-			if(i & ~(Chhltd|Ack))
+            
+			if(i & ~(Chhltd|Ack)) {
 				error(Eio);
-			if(hc->hcdma != hcdma)
+            }
+            
+			if(hc->hcdma != hcdma) {
 				print("usbotg: weird hcdma %x->%x intr %x->%x\n",
                       hcdma, hc->hcdma, i, hc->hcint);
+            }
 		}
+
+        // how many bytes left
 		n = hc->hcdma - hcdma;
+        
 		if(n == 0){
-			if((hc->hctsiz & Pktcnt) != (hctsiz & Pktcnt))
+			if((hc->hctsiz & Pktcnt) != (hctsiz & Pktcnt)) {
 				break;
-			else
+                
+			} else {
 				continue;
+            }
 		}
+
+        
 		if(dir == Epin && ep->ttype == Tbulk && n == nleft){
 			nt = (hctsiz & Xfersize) - (hc->hctsiz & Xfersize);
+            
 			if(nt != n){
-				if(n == ROUND(nt, 4))
+				if(n == ROUND(nt, 4)) {
 					n = nt;
-				else
+				} else {
 					print("usbotg: intr %8.8ux "
                           "dma %8.8ux-%8.8ux "
                           "hctsiz %8.8ux-%8.ux\n",
                           i, hcdma, hc->hcdma, hctsiz,
                           hc->hctsiz);
+                }
 			}
 		}
+        
 		if(n > nleft){
-			if(n != ROUND(nleft, 4))
+			if(n != ROUND(nleft, 4)) {
 				dprint("too much: wanted %d got %d\n",
                        len, len - nleft + n);
+            }
+            
 			n = nleft;
 		}
+
+        
 		nleft -= n;
-		if(nleft == 0 || (n % maxpkt) != 0)
+        
+		if(nleft == 0 || (n % maxpkt) != 0) {
 			break;
-		if((i & Xfercomp) && ep->ttype != Tctl)
+        }
+        
+		if((i & Xfercomp) && ep->ttype != Tctl) {
 			break;
-		if(dir == Epout)
+        }
+        
+		if(dir == Epout) {
 			dprint("too little: nleft %d hcdma %x->%x hctsiz %x->%x intr %x\n",
                    nleft, hcdma, hc->hcdma, hctsiz, hc->hctsiz, i);
+        }
 	}
+    
 	logdump(ep);
 	return len - nleft;
 }
@@ -453,39 +583,58 @@ eptrans(Ep *ep, int rw, void *a, long n)
 
 	if(ep->clrhalt){
 		ep->clrhalt = 0;
-		if(ep->mode != OREAD)
+         
+		if(ep->mode != OREAD) {
 			ep->toggle[Write] = DATA0;
-		if(ep->mode != OWRITE)
+        }
+        
+		if(ep->mode != OWRITE) {
 			ep->toggle[Read] = DATA0;
+        }
 	}
+    
 	hc = chanalloc(ep);
+
 	if(waserror()){
 		ep->toggle[rw] = hc->hctsiz & Pid;
+
 		chanrelease(ep, hc);
-		if(strcmp(up->errstr, Estalled) == 0)
+
+        if(strcmp(up->errstr, Estalled) == 0) {
 			return 0;
-		nexterror();
+        }
+
+        nexterror();
 	}
+    
 	chansetup(hc, ep);
+
 	if(rw == Read && ep->ttype == Tbulk){
 		long sofar, m;
 
 		sofar = 0;
+        
 		do{
 			m = n - sofar;
-			if(m > ep->maxpkt)
+			if(m > ep->maxpkt) {
 				m = ep->maxpkt;
+            }
+            
 			m = chanio(ep, hc, Epin, ep->toggle[rw],
                        (char*)a + sofar, m);
+            
 			ep->toggle[rw] = hc->hctsiz & Pid;
 			sofar += m;
+            
 		}while(sofar < n && m == ep->maxpkt);
+        
 		n = sofar;
+        
 	}else{
-		n = chanio(ep, hc, rw == Read? Epin : Epout, ep->toggle[rw],
-                   a, n);
+		n = chanio(ep, hc, rw == Read? Epin : Epout, ep->toggle[rw], a, n);
 		ep->toggle[rw] = hc->hctsiz & Pid;
 	}
+    
 	chanrelease(ep, hc);
 	poperror();
 	return n;
@@ -501,46 +650,62 @@ ctltrans(Ep *ep, uchar *req, long n)
 	int datalen;
 
 	epio = ep->aux;
+    
 	if(epio->cb != nil){
 		freeb(epio->cb);
 		epio->cb = nil;
 	}
-	if(n < Rsetuplen)
+    
+	if(n < Rsetuplen) {
 		error(Ebadlen);
+    }
+    
 	if(req[Rtype] & Rd2h){
 		datalen = GET2(req+Rcount);
-		if(datalen <= 0 || datalen > Maxctllen)
+
+        if(datalen <= 0 || datalen > Maxctllen) {
 			error(Ebadlen);
+        }
+
 		/* XXX cache madness */
 		epio->cb = b = allocb(ROUND(datalen, ep->maxpkt) + CACHELINESZ);
 		b->wp = (uchar*)ROUND((uintptr)b->wp, CACHELINESZ);
 		memset(b->wp, 0x55, b->lim - b->wp);
 		cachedwbinvse(b->wp, b->lim - b->wp);
 		data = b->wp;
+        
 	}else{
 		b = nil;
 		datalen = n - Rsetuplen;
 		data = req + Rsetuplen;
 	}
+    
 	hc = chanalloc(ep);
+    
 	if(waserror()){
 		chanrelease(ep, hc);
 		if(strcmp(up->errstr, Estalled) == 0)
 			return 0;
 		nexterror();
 	}
+    
 	chansetup(hc, ep);
+    
 	chanio(ep, hc, Epout, SETUP, req, Rsetuplen);
+    
 	if(req[Rtype] & Rd2h){
 		b->wp += chanio(ep, hc, Epin, DATA1, data, datalen);
 		chanio(ep, hc, Epout, DATA1, nil, 0);
 		n = Rsetuplen;
 	}else{
-		if(datalen > 0)
+		if(datalen > 0) {
 			chanio(ep, hc, Epout, DATA1, data, datalen);
+        }
+        
 		chanio(ep, hc, Epin, DATA1, nil, 0);
 		n = Rsetuplen + datalen;
 	}
+    
 	chanrelease(ep, hc);
 	poperror();
 	return n;
@@ -554,16 +719,23 @@ ctldata(Ep *ep, void *a, long n)
 
 	epio = ep->aux;
 	b = epio->cb;
-	if(b == nil)
+    
+	if(b == nil) {
 		return 0;
-	if(n > BLEN(b))
+    }
+    
+	if(n > BLEN(b)) {
 		n = BLEN(b);
+    }
+    
 	memmove(a, b->rp, n);
 	b->rp += n;
+    
 	if(BLEN(b) == 0){
 		freeb(b);
 		epio->cb = nil;
 	}
+    
 	return n;
 }
 
@@ -571,8 +743,7 @@ static void
 greset(Dwcregs *r, int bits)
 {
 	r->grstctl |= bits;
-	while(r->grstctl & bits)
-		;
+	while(r->grstctl & bits);
 	microdelay(10);
 }
 
@@ -592,8 +763,8 @@ init(Hci *hp)
 	r->gahbcfg = 0;
 	setpower(PowerUsb, 1);
 
-	while((r->grstctl&Ahbidle) == 0)
-		;
+	while((r->grstctl&Ahbidle) == 0);
+    
 	greset(r, Csftrst);
 
 	r->gusbcfg |= Force_host_mode;
@@ -607,11 +778,13 @@ init(Hci *hp)
 	r->grxfsiz = rx;
 	r->gnptxfsiz = rx | tx<<ODepth;
 	tsleep(&up->sleep, return0, 0, 1);
+
 	r->hptxfsiz = (rx + tx) | ptx << ODepth;
 	greset(r, Rxfflsh);
 	r->grstctl = TXF_ALL;
 	greset(r, Txfflsh);
-	dprint("usbotg: FIFO depth %d sizes rx/nptx/ptx %8.8ux %8.8ux %8.8ux\n",
+
+    dprint("usbotg: FIFO depth %d sizes rx/nptx/ptx %8.8ux %8.8ux %8.8ux\n",
            n, r->grxfsiz, r->gnptxfsiz, r->hptxfsiz);
 
 	r->hport0 = Prtpwr|Prtconndet|Prtenchng|Prtovrcurrchng;
@@ -639,8 +812,10 @@ fiqintr(Ureg*, void *a)
 	r = ctlr->regs;
 	wakechan = 0;
 	intr = r->gintsts;
+    
 	if(intr & Hcintr){
 		haint = r->haint & r->haintmsk;
+        
 		for(i = 0; haint; i++){
 			if(haint & 1){
 				if(chanintr(ctlr, i) == 0){
@@ -648,9 +823,11 @@ fiqintr(Ureg*, void *a)
 					wakechan |= 1<<i;
 				}
 			}
+            
 			haint >>= 1;
 		}
 	}
+
 	if(intr & Sofintr){
 		r->gintsts = Sofintr;
 		if((r->hfnum&7) != 6){
@@ -659,6 +836,7 @@ fiqintr(Ureg*, void *a)
 			ctlr->sofchan = 0;
 		}
 	}
+    
 	if(wakechan){
 		ctlr->wakechan |= wakechan;
 		armtimerset(1);
@@ -673,14 +851,19 @@ irqintr(Ureg*, void *a)
 	int i, x;
 
 	ctlr = a;
-	x = splfhi();
+
+    x = splfhi();
+
 	armtimerset(0);
 	wakechan = ctlr->wakechan;
 	ctlr->wakechan = 0;
 	splx(x);
-	for(i = 0; wakechan; i++){
-		if(wakechan & 1)
+
+    for(i = 0; wakechan; i++){
+		if(wakechan & 1) {
 			wakeup(&ctlr->chanintr[i]);
+        }
+        
 		wakechan >>= 1;
 	}
 }
@@ -690,22 +873,32 @@ epopen(Ep *ep)
 {
 	ddprint("usbotg: epopen ep%d.%d ttype %d\n",
             ep->dev->nb, ep->nb, ep->ttype);
+    
 	switch(ep->ttype){
-        case Tnone:
-            error(Enotconfig);
-        case Tintr:
-            assert(ep->pollival > 0);
-            /* fall through */
-        case Tbulk:
-            if(ep->toggle[Read] == 0)
-                ep->toggle[Read] = DATA0;
-            if(ep->toggle[Write] == 0)
-                ep->toggle[Write] = DATA0;
-            break;
+    case Tnone:
+        error(Enotconfig);
+            
+    case Tintr:
+        assert(ep->pollival > 0);
+        /* fall through */
+            
+    case Tbulk:
+        if(ep->toggle[Read] == 0) {
+            ep->toggle[Read] = DATA0;
+        }
+            
+        if(ep->toggle[Write] == 0) {
+            ep->toggle[Write] = DATA0;
+        }
+            
+        break;
 	}
+    
 	ep->aux = malloc(sizeof(Epio));
-	if(ep->aux == nil)
+    
+	if(ep->aux == nil) {
 		error(Enomem);
+    }
 }
 
 static void
@@ -713,13 +906,15 @@ epclose(Ep *ep)
 {
 	ddprint("usbotg: epclose ep%d.%d ttype %d\n",
             ep->dev->nb, ep->nb, ep->ttype);
+    
 	switch(ep->ttype){
-        case Tctl:
-            freeb(((Epio*)ep->aux)->cb);
-            /* fall through */
-        default:
-            free(ep->aux);
-            break;
+    case Tctl:
+        freeb(((Epio*)ep->aux)->cb);
+        /* fall through */
+        
+    default:
+        free(ep->aux);
+        break;
 	}
 }
 
@@ -735,38 +930,49 @@ epread(Ep *ep, void *a, long n)
 	ddprint("epread ep%d.%d %ld\n", ep->dev->nb, ep->nb, n);
 	epio = ep->aux;
 	b = nil;
+    
 	qlock(epio);
+    
 	if(waserror()){
 		qunlock(epio);
-		if(b)
+
+        if(b) {
 			freeb(b);
+        }
+
 		nexterror();
 	}
+    
 	switch(ep->ttype){
-        default:
-            error(Egreg);
-        case Tctl:
-            nr = ctldata(ep, a, n);
-            qunlock(epio);
-            poperror();
-            return nr;
-        case Tintr:
-            elapsed = TK2MS(m->ticks) - epio->lastpoll;
-            if(elapsed < ep->pollival)
-                tsleep(&up->sleep, return0, 0, ep->pollival - elapsed);
-            /* fall through */
-        case Tbulk:
-            /* XXX cache madness */
-            b = allocb(ROUND(n, ep->maxpkt) + CACHELINESZ);
-            p = (uchar*)ROUND((uintptr)b->base, CACHELINESZ);
-            cachedwbinvse(p, n);
-            nr = eptrans(ep, Read, p, n);
-            epio->lastpoll = TK2MS(m->ticks);
-            memmove(a, p, nr);
-            qunlock(epio);
-            freeb(b);
-            poperror();
-            return nr;
+    default:
+        error(Egreg);
+        
+    case Tctl:
+        nr = ctldata(ep, a, n);
+        qunlock(epio);
+        poperror();
+        return nr;
+        
+    case Tintr:
+        elapsed = TK2MS(m->ticks) - epio->lastpoll;
+
+        if(elapsed < ep->pollival) {
+            tsleep(&up->sleep, return0, 0, ep->pollival - elapsed);
+        }
+
+        /* fall through */
+    case Tbulk:
+        /* XXX cache madness */
+        b = allocb(ROUND(n, ep->maxpkt) + CACHELINESZ);
+        p = (uchar*)ROUND((uintptr)b->base, CACHELINESZ);
+        cachedwbinvse(p, n);
+        nr = eptrans(ep, Read, p, n);
+        epio->lastpoll = TK2MS(m->ticks);
+        memmove(a, p, nr);
+        qunlock(epio);
+        freeb(b);
+        poperror();
+        return nr;
 	}
 }
 
@@ -781,38 +987,50 @@ epwrite(Ep *ep, void *a, long n)
 	ddprint("epwrite ep%d.%d %ld\n", ep->dev->nb, ep->nb, n);
 	epio = ep->aux;
 	b = nil;
+
 	qlock(epio);
-	if(waserror()){
+
+    if(waserror()){
 		qunlock(epio);
-		if(b)
+
+        if(b) {
 			freeb(b);
+        }
+
 		nexterror();
 	}
+    
 	switch(ep->ttype){
-        default:
-            error(Egreg);
-        case Tintr:
-            elapsed = TK2MS(m->ticks) - epio->lastpoll;
-            if(elapsed < ep->pollival)
-                tsleep(&up->sleep, return0, 0, ep->pollival - elapsed);
-            /* fall through */
-        case Tctl:
-        case Tbulk:
-            /* XXX cache madness */
-            b = allocb(n + CACHELINESZ);
-            p = (uchar*)ROUND((uintptr)b->base, CACHELINESZ);
-            memmove(p, a, n);
-            cachedwbse(p, n);
-            if(ep->ttype == Tctl)
-                n = ctltrans(ep, p, n);
-            else{
-                n = eptrans(ep, Write, p, n);
-                epio->lastpoll = TK2MS(m->ticks);
-            }
-            qunlock(epio);
-            freeb(b);
-            poperror();
-            return n;
+    default:
+        error(Egreg);
+        
+    case Tintr:
+        elapsed = TK2MS(m->ticks) - epio->lastpoll;
+        if(elapsed < ep->pollival) {
+            tsleep(&up->sleep, return0, 0, ep->pollival - elapsed);
+        }
+        /* fall through */
+        
+    case Tctl:
+    case Tbulk:
+        /* XXX cache madness */
+        b = allocb(n + CACHELINESZ);
+        p = (uchar*)ROUND((uintptr)b->base, CACHELINESZ);
+        memmove(p, a, n);
+        cachedwbse(p, n);
+        
+        if(ep->ttype == Tctl) {
+            n = ctltrans(ep, p, n);
+        } else {
+            n = eptrans(ep, Write, p, n);
+            epio->lastpoll = TK2MS(m->ticks);
+        }
+        
+        qunlock(epio);
+        
+        freeb(b);
+        poperror();
+        return n;
 	}
 }
 
@@ -829,12 +1047,18 @@ portenable(Hci *hp, int port, int on)
 	Dwcregs *r;
 
 	assert(port == 1);
+    
 	ctlr = hp->aux;
 	r = ctlr->regs;
+    
 	dprint("usbotg enable=%d; sts %#x\n", on, r->hport0);
-	if(!on)
+    
+	if(!on) {
 		r->hport0 = Prtpwr | Prtena;
+    }
+    
 	tsleep(&up->sleep, return0, 0, Enabledelay);
+    
 	dprint("usbotg enable=%d; sts %#x\n", on, r->hport0);
 	return 0;
 }
@@ -847,22 +1071,35 @@ portreset(Hci *hp, int port, int on)
 	int b, s;
 
 	assert(port == 1);
+    
 	ctlr = hp->aux;
 	r = ctlr->regs;
+    
 	dprint("usbotg reset=%d; sts %#x\n", on, r->hport0);
-	if(!on)
+    
+	if(!on) {
 		return 0;
+    }
+    
 	r->hport0 = Prtpwr | Prtrst;
 	tsleep(&up->sleep, return0, 0, ResetdelayHS);
+    
 	r->hport0 = Prtpwr;
 	tsleep(&up->sleep, return0, 0, Enabledelay);
+    
 	s = r->hport0;
 	b = s & (Prtconndet|Prtenchng|Prtovrcurrchng);
-	if(b != 0)
+    
+	if(b != 0) {
 		r->hport0 = Prtpwr | b;
+    }
+    
 	dprint("usbotg reset=%d; sts %#x\n", on, s);
-	if((s & Prtena) == 0)
+    
+	if((s & Prtena) == 0) {
 		print("usbotg: host port not enabled after reset");
+    }
+    
 	return 0;
 }
 
@@ -878,33 +1115,55 @@ portstatus(Hci *hp, int port)
 	r = ctlr->regs;
 	s = r->hport0;
 	b = s & (Prtconndet|Prtenchng|Prtovrcurrchng);
-	if(b != 0)
+    
+	if(b != 0) {
 		r->hport0 = Prtpwr | b;
+    }
+
 	b = 0;
-	if(s & Prtconnsts)
+
+    if(s & Prtconnsts) {
 		b |= HPpresent;
-	if(s & Prtconndet)
+    }
+    
+	if(s & Prtconndet) {
 		b |= HPstatuschg;
-	if(s & Prtena)
+    }
+    
+	if(s & Prtena) {
 		b |= HPenable;
-	if(s & Prtenchng)
+    }
+    
+	if(s & Prtenchng) {
 		b |= HPchange;
-	if(s & Prtovrcurract)
+    }
+    
+	if(s & Prtovrcurract) {
         b |= HPovercurrent;
-	if(s & Prtsusp)
+    }
+    
+	if(s & Prtsusp) {
 		b |= HPsuspend;
-	if(s & Prtrst)
+    }
+    
+	if(s & Prtrst) {
 		b |= HPreset;
-	if(s & Prtpwr)
+    }
+    
+	if(s & Prtpwr) {
 		b |= HPpower;
+    }
+    
 	switch(s & Prtspd){
-        case HIGHSPEED:
-            b |= HPhigh;
-            break;
-        case LOWSPEED:
-            b |= HPslow;
-            break;
-	}
+    case HIGHSPEED:
+        b |= HPhigh;
+        break;
+        
+    case LOWSPEED:
+        b |= HPslow;
+        break;
+    }
+
 	return b;
 }
 
@@ -926,12 +1185,16 @@ reset(Hci *hp)
 	uint id;
 
 	ctlr = &dwc;
-	if(ctlr->regs != nil)
+	if(ctlr->regs != nil) {
 		return -1;
+    }
+
 	ctlr->regs = (Dwcregs*)USBREGS;
 	id = ctlr->regs->gsnpsid;
-	if((id>>16) != ('O'<<8 | 'T'))
+	if((id>>16) != ('O'<<8 | 'T')) {
 		return -1;
+    }
+
 	dprint("usbotg: rev %d.%3.3x\n", (id>>12)&0xF, id&0xFFF);
 
 	intrenable(IRQtimerArm, irqintr, ctlr, 0, "dwc");
@@ -957,6 +1220,7 @@ reset(Hci *hp)
 	hp->shutdown = shutdown;
 	hp->debug = setdebug;
 	hp->type = "dwcotg";
+    
 	return 0;
 }
 
