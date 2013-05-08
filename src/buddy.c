@@ -32,7 +32,6 @@ struct order {
 
 struct kmem {
     struct spinlock lock;
-    int             use_lock;
     uint            start;             // start of memory for marks
     uint            start_heap;        // start of allocatable memory
     uint            end;
@@ -65,7 +64,6 @@ static inline int available (uint bitmap, int blk_id)
 void kmem_init (void)
 {
     initlock(&kmem.lock, "kmem");
-    kmem.use_lock = 0;
 }
 
 
@@ -107,8 +105,6 @@ void kinit2(void *vstart, void *vend)
     for (i = kmem.start_heap; i < kmem.end; i += PTE_SZ){
         free_page ((void*)i);
     }
-
-    kmem.use_lock = 1;
 }
 
 // mark a block as unavailable
@@ -215,52 +211,56 @@ void* get_blk (int order)
     return NULL;
 }
 
-void *kmalloc_b (int order)
+static void *_kmalloc (int order)
 {
     struct order *ord;
     uint8         *up;
+
+    ord = &kmem.orders[order - MIN_ORD];
+    up  = NULL;
     
+    if (ord->head != NIL) {
+        up = get_blk(order);
+        
+    } else if (order < MAX_ORD){
+        // if currently no block available, try to split a parent
+        up = _kmalloc (order + 1);
+
+        if (up != NULL) {
+            kfree_b (up + (1 << order), order);
+        }
+    }
+
+    return up;
+}
+
+void *kmalloc_b (int order)
+{
+    uint8         *up;
+
     if ((order > MAX_ORD) || (order < MIN_ORD)) {
         panic("kmalloc: order out of range\n");
     }
 
-    ord = &kmem.orders[order - MIN_ORD];
+    acquire(&kmem.lock);
+    up = _kmalloc(order);
+    release(&kmem.lock);
 
-    if (ord->head != NIL) {
-        return get_blk(order);
-    }
-
-    // if currently no block available, try to split a parent
-    if (order < MAX_ORD){
-        up = kmalloc_b (order + 1);
-
-        if (up == NULL) {
-            return NULL;
-        }
-
-        kfree_b (up + (1 << order), order);
-        return up;
-    }
-
-    return NULL;
+    return up;
 }
 
 // free kernel memory, we require order parameter here.
 // so we do not need to save hidden information right before
 // the memory block. Otherwise, it will break the natural
 // alignment. Hardware sometimes demands address alignment
-void kfree_b (void *mem, int order)
+void _kfree (void *mem, int order)
 {
     int blk_id, buddy_id;
     struct mark *mk;
-    
-    if ((order > MAX_ORD) || (order < MIN_ORD) || (uint)mem & ((1<<order) -1)) {
-        panic("kfree: order out of range or memory unaligned\n");
-    }
 
     blk_id = mem2blkid(order, mem);
     mk = get_mark(order, blk_id >> 5);
-
+    
     if (available(mk->bitmap, blk_id)) {
         panic ("kfree: double free");
     }
@@ -269,12 +269,22 @@ void kfree_b (void *mem, int order)
                                 // buddy must be in the same bit map
     if (!available(mk->bitmap, buddy_id) || (order == MAX_ORD)) {
         mark_blk(order, blk_id);
-        return;
+    } else {
+        // our buddy is also free, merge it
+        unmark_blk (order, buddy_id);
+        _kfree (blkid2mem(order, blk_id & ~0x0001), order+1);
+    }
+}
+
+void kfree_b (void *mem, int order)
+{
+    if ((order > MAX_ORD) || (order < MIN_ORD) || (uint)mem & ((1<<order) -1)) {
+        panic("kfree: order out of range or memory unaligned\n");
     }
 
-    // our buddy is also free, merge it
-    unmark_blk (order, buddy_id);
-    kfree_b (blkid2mem(order, blk_id & ~0x0001), order+1);
+    acquire(&kmem.lock);
+    _kfree(mem, order);
+    release(&kmem.lock);
 }
 
 // free a page
