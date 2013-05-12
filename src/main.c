@@ -27,10 +27,10 @@ void kmain (void)
     // interrrupt vector table is in the middle of first 1MB. We use the left
     // over for page tables
     vectbl = _P2V (VEC_TBL & PDE_MASK);
+    
     init_vmm ();
     kpt_freerange (align_up(&end, PT_SZ), vectbl);
     kpt_freerange (vectbl + PT_SZ, _P2V(INIT_KERNMAP));
-
     paging_init (INIT_KERNMAP, PHYSTOP);
 
     cpu = &cpus[0];

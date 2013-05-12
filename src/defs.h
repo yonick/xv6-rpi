@@ -69,10 +69,14 @@ struct buf*     bread(uint, uint);
 void            brelse(struct buf*);
 void            bwrite(struct buf*);
 
-void free_page(void *v);
-void kfree_b (void *mem, int order);
-void* alloc_page (void);
-void *kmalloc_b (int order);
+//buddy.c
+void            kinit2_b(void*, void*);
+void            kmem_init_b (void);
+void            free_page(void *v);
+void            kfree_b (void *mem, int order);
+void*           alloc_page (void);
+void *          kmalloc_b (int order);
+
 // console.c
 void            consoleinit(void);
 void            cprintf(char*, ...);

@@ -1,5 +1,4 @@
 // Buddy memory allocator
-
 #include "types.h"
 #include "defs.h"
 #include "param.h"
@@ -9,7 +8,13 @@
 #include "arm.h"
 
 
-// this file implement the buddy memory allocator.
+// this file implement the buddy memory allocator. Each order divides
+// the memory pool into equal-sized blocks (2^n). We use bitmap to record
+// allocation status for each block. This allows for efficient merging
+// when blocks are freed. We also use double-linked list to chain together
+// free blocks (for each order), thus allowing fast allocation. There is
+// about 8% overhead (maximum) for this structure.
+
 #define MAX_ORD      12
 #define MIN_ORD      6
 #define N_ORD        (MAX_ORD - MIN_ORD +1)
@@ -41,19 +46,19 @@ struct kmem {
 struct kmem kmem;
 
 // coversion between block id to mark and memory address
-static inline struct mark* get_mark (int ord, int idx)
+static inline struct mark* get_mark (int order, int idx)
 {
-    return (struct mark*)kmem.start + (kmem.orders[ord - MIN_ORD].offset + idx);
+    return (struct mark*)kmem.start + (kmem.orders[order - MIN_ORD].offset + idx);
 }
 
-static inline void* blkid2mem (int ord, int blkid)
+static inline void* blkid2mem (int order, int blkid)
 {
-    return (void*)(kmem.start_heap + (1 << ord) * blkid);
+    return (void*)(kmem.start_heap + (1 << order) * blkid);
 }
 
-static inline int mem2blkid (int ord, void *mem)
+static inline int mem2blkid (int order, void *mem)
 {
-    return ((uint)mem - kmem.start_heap) >> ord;
+    return ((uint)mem - kmem.start_heap) >> order;
 }
 
 static inline int available (uint bitmap, int blk_id)
@@ -61,13 +66,13 @@ static inline int available (uint bitmap, int blk_id)
     return bitmap & (1 << (blk_id & 0x1F));
 }
 
-void kmem_init (void)
+void kmem_init_b (void)
 {
     initlock(&kmem.lock, "kmem");
 }
 
 
-void kinit2(void *vstart, void *vend)
+void kinit2_b(void *vstart, void *vend)
 {
     int             i, j;
     uint32          total, n;
@@ -80,7 +85,7 @@ void kinit2(void *vstart, void *vend)
     len = kmem.end - kmem.start;
 
     // reserved memory at vstart for an array of marks (for all the orders)
-    n = len >> (MAX_ORD + 5) + 1; // estimated # of marks for max order
+    n = (len >> (MAX_ORD + 5)) + 1; // estimated # of marks for max order
     total = 0;
     
     for (i = N_ORD - 1; i >= 0; i--) {
@@ -102,8 +107,8 @@ void kinit2(void *vstart, void *vend)
     // add all available memory to the highest order bucket
     kmem.start_heap = align_up(kmem.start + total * sizeof(*mk), 1 << MAX_ORD);
     
-    for (i = kmem.start_heap; i < kmem.end; i += PTE_SZ){
-        free_page ((void*)i);
+    for (i = kmem.start_heap; i < kmem.end; i += (1 << MAX_ORD)){
+        kfree_b ((void*)i, MAX_ORD);
     }
 }
 
@@ -125,9 +130,9 @@ void unmark_blk (int order, int blk_id)
     mk->bitmap &= ~(1 << (blk_id & 0x1F));
 
     // if it's the last block in the bitmap, delete from the list
-    blk_id >>= 5;
-
     if (mk->bitmap == 0) {
+        blk_id >>= 5;
+        
         prev = PRE_LNK(mk->lnks);
         next = NEXT_LNK(mk->lnks);
 
@@ -168,10 +173,10 @@ void mark_blk (int order, int blk_id)
     }
     
     mk->bitmap |= (1 << (blk_id & 0x1F));
-    blk_id >>= 5;
     
     // just insert it to the head, no need to keep the list ordered
     if (insert) {
+        blk_id >>= 5;
         mk->lnks = LNKS(NIL, ord->head);
 
         // fix the pre pointer of the next mark
@@ -211,6 +216,9 @@ void* get_blk (int order)
     return NULL;
 }
 
+void _kfree (void *mem, int order);
+
+
 static void *_kmalloc (int order)
 {
     struct order *ord;
@@ -227,13 +235,14 @@ static void *_kmalloc (int order)
         up = _kmalloc (order + 1);
 
         if (up != NULL) {
-            kfree_b (up + (1 << order), order);
+            _kfree (up + (1 << order), order);
         }
     }
 
     return up;
 }
 
+// allocate memory that has the size of (1 << order)
 void *kmalloc_b (int order)
 {
     uint8         *up;
@@ -249,10 +258,6 @@ void *kmalloc_b (int order)
     return up;
 }
 
-// free kernel memory, we require order parameter here.
-// so we do not need to save hidden information right before
-// the memory block. Otherwise, it will break the natural
-// alignment. Hardware sometimes demands address alignment
 void _kfree (void *mem, int order)
 {
     int blk_id, buddy_id;
@@ -276,6 +281,8 @@ void _kfree (void *mem, int order)
     }
 }
 
+// free kernel memory, we require order parameter here to avoid
+// storing size info somewhere which might break the alignment
 void kfree_b (void *mem, int order)
 {
     if ((order > MAX_ORD) || (order < MIN_ORD) || (uint)mem & ((1<<order) -1)) {

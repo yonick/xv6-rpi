@@ -10,6 +10,7 @@ OBJS = \
         arm.o\
         asm.o\
         bio.o\
+        buddy.o\
         console.o\
         cga.o\
         exec.o\
