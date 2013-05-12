@@ -17,7 +17,6 @@ OBJS = \
         fb_init.o\
         file.o\
         fs.o\
-        kalloc.o\
         log.o\
         main.o\
         memide.o\

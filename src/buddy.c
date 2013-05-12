@@ -28,7 +28,7 @@ struct mark {
 #define PRE_LNK(lnks)   ((lnks) >> 16)
 #define NEXT_LNK(lnks)  ((lnks) & 0xFFFF)
 #define LNKS(pre, next) (((pre) << 16) | ((next) & 0xFFFF))
-#define NIL             (-1)
+#define NIL             ((uint16)0xFFFF)
 
 struct order {
     uint32  head;       // the first non-empty mark
@@ -43,7 +43,7 @@ struct kmem {
     struct order    orders[N_ORD];  // orders used for buddy systems
 };
 
-struct kmem kmem;
+static struct kmem kmem;
 
 // coversion between block id to mark and memory address
 static inline struct mark* get_mark (int order, int idx)
@@ -66,13 +66,12 @@ static inline int available (uint bitmap, int blk_id)
     return bitmap & (1 << (blk_id & 0x1F));
 }
 
-void kmem_init_b (void)
+void kmem_init (void)
 {
     initlock(&kmem.lock, "kmem");
 }
 
-
-void kinit2_b(void *vstart, void *vend)
+void kmem_init2(void *vstart, void *vend)
 {
     int             i, j;
     uint32          total, n;
@@ -108,12 +107,12 @@ void kinit2_b(void *vstart, void *vend)
     kmem.start_heap = align_up(kmem.start + total * sizeof(*mk), 1 << MAX_ORD);
     
     for (i = kmem.start_heap; i < kmem.end; i += (1 << MAX_ORD)){
-        kfree_b ((void*)i, MAX_ORD);
+        kfree ((void*)i, MAX_ORD);
     }
 }
 
 // mark a block as unavailable
-void unmark_blk (int order, int blk_id)
+static void unmark_blk (int order, int blk_id)
 {
     struct mark     *mk, *p;
     struct order    *ord;
@@ -128,7 +127,7 @@ void unmark_blk (int order, int blk_id)
     }
 
     mk->bitmap &= ~(1 << (blk_id & 0x1F));
-
+    
     // if it's the last block in the bitmap, delete from the list
     if (mk->bitmap == 0) {
         blk_id >>= 5;
@@ -155,7 +154,7 @@ void unmark_blk (int order, int blk_id)
 }
 
 // mark a block as available
-void mark_blk (int order, int blk_id)
+static void mark_blk (int order, int blk_id)
 {
     struct mark     *mk, *p;
     struct order    *ord;
@@ -190,7 +189,7 @@ void mark_blk (int order, int blk_id)
 }
 
 // get a block
-void* get_blk (int order)
+static void* get_blk (int order)
 {
     struct mark *mk;
     int blk_id;
@@ -243,7 +242,7 @@ static void *_kmalloc (int order)
 }
 
 // allocate memory that has the size of (1 << order)
-void *kmalloc_b (int order)
+void *kmalloc (int order)
 {
     uint8         *up;
 
@@ -265,7 +264,7 @@ void _kfree (void *mem, int order)
 
     blk_id = mem2blkid(order, mem);
     mk = get_mark(order, blk_id >> 5);
-    
+
     if (available(mk->bitmap, blk_id)) {
         panic ("kfree: double free");
     }
@@ -283,7 +282,7 @@ void _kfree (void *mem, int order)
 
 // free kernel memory, we require order parameter here to avoid
 // storing size info somewhere which might break the alignment
-void kfree_b (void *mem, int order)
+void kfree (void *mem, int order)
 {
     if ((order > MAX_ORD) || (order < MIN_ORD) || (uint)mem & ((1<<order) -1)) {
         panic("kfree: order out of range or memory unaligned\n");
@@ -297,11 +296,42 @@ void kfree_b (void *mem, int order)
 // free a page
 void free_page(void *v)
 {
-    kfree_b (v, PTE_SHIFT);
+    kfree (v, PTE_SHIFT);
 }
 
 // allocate a page
 void* alloc_page (void)
 {
-    return kmalloc_b (PTE_SHIFT);
+    return kmalloc (PTE_SHIFT);
 }
+
+// round up power of 2, then get the order
+//   http://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2
+int get_order (uint32 v)
+{
+    uint32 ord;
+    
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+
+    for (ord = 0; ord < 32; ord++) {
+        if (v & (1 << ord)) {
+            break;
+        }
+    }
+    
+    if (ord < MIN_ORD) {
+        ord = MIN_ORD;
+    } else if (ord > MAX_ORD) {
+        panic ("order too big!");
+    }
+    
+    return ord;
+
+}
+
