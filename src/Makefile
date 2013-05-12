@@ -1,6 +1,6 @@
 # specify path to QEMU, installed with MacPorts 
 QEMU = qemu-system-arm
-
+CFLAGS += -Werror
 include makefile.inc
 
 # link the libgcc.a for __aeabi_idiv. ARM has no native support for div
@@ -51,6 +51,7 @@ initcode: initcode.S
 
 fs.img: 
 	make -C usr
+	make -C usb
 	cp usr/fs.img fs.img
 
 clean: 
