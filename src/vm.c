@@ -42,6 +42,11 @@ static void _kpt_free (char *v)
 
 static void kpt_free (char *v)
 {
+    if (v >= (char*)P2V(INIT_KERNMAP)) {
+        kfree(v, PT_ORDER);
+        return;
+    }
+    
     acquire(&kpt_mem.lock);
     _kpt_free (v);
     release(&kpt_mem.lock);
@@ -59,31 +64,19 @@ void kpt_freerange (uint32 low, uint32 hi)
 void* kpt_alloc (void)
 {
     struct run *r;
-    char *p;
 
     acquire(&kpt_mem.lock);
 
-    r = kpt_mem.freelist;
-
-    // no cache of page tables, allocate a new page (4KB)
-    if (r == NULL ) {
-        p = kalloc();
-
-        if (p == NULL ) {
-            panic("oom: kpt_alloc");
-        }
-
-        // only use the first 1K, release others to the pool
-        kpt_free(p + PT_SZ);
-        kpt_free(p + PT_SZ * 2);
-        kpt_free(p + PT_SZ * 3);
-
-        r = (struct run*) p;
-    } else {
+    if ((r = kpt_mem.freelist) != NULL ) {
         kpt_mem.freelist = r->next;
     }
 
     release(&kpt_mem.lock);
+
+    // Allocate a PT page if no inital pages is available
+    if ((r == NULL) && ((r = kmalloc (PT_ORDER)) == NULL)) {
+        panic("oom: kpt_alloc");
+    }
 
     memset(r, 0, PT_SZ);
     return (char*) r;
@@ -191,7 +184,7 @@ void inituvm (pde_t *pgdir, char *init, uint sz)
         panic("inituvm: more than a page");
     }
 
-    mem = kalloc();
+    mem = alloc_page();
     memset(mem, 0, PTE_SZ);
     mappages(pgdir, 0, PTE_SZ, v2p(mem), AP_KU);
     memmove(mem, init, sz);
@@ -247,7 +240,7 @@ int allocuvm (pde_t *pgdir, uint oldsz, uint newsz)
     a = align_up(oldsz, PTE_SZ);
 
     for (; a < newsz; a += PTE_SZ) {
-        mem = kalloc();
+        mem = alloc_page ();
 
         if (mem == 0) {
             cprintf("allocuvm out of memory\n");
@@ -291,7 +284,7 @@ int deallocuvm (pde_t *pgdir, uint oldsz, uint newsz)
                 panic("deallocuvm");
             }
 
-            kfree(p2v(pa));
+            free_page (p2v(pa));
             *pte = 0;
         }
     }
@@ -367,7 +360,7 @@ pde_t* copyuvm (pde_t *pgdir, uint sz)
         pa = PTE_ADDR (*pte);
         ap = PTE_AP (*pte);
 
-        if ((mem = kalloc()) == 0) {
+        if ((mem = alloc_page()) == 0) {
             goto bad;
         }
 

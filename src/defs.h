@@ -69,13 +69,15 @@ struct buf*     bread(uint, uint);
 void            brelse(struct buf*);
 void            bwrite(struct buf*);
 
-//buddy.c
-void            kinit2_b(void*, void*);
-void            kmem_init_b (void);
+// buddy.c
+void            kmem_init (void);
+void            kmem_init2(void *vstart, void *vend);
+void*           kmalloc (int order);
+void            kfree (void *mem, int order);
 void            free_page(void *v);
-void            kfree_b (void *mem, int order);
 void*           alloc_page (void);
-void *          kmalloc_b (int order);
+void            kmem_test_b (void);
+int             get_order (uint32 v);
 
 // console.c
 void            consoleinit(void);
@@ -118,12 +120,6 @@ int             writei(struct inode*, char*, uint, uint);
 void            ideinit(void);
 void            iderw(struct buf*);
 
-// kalloc.c
-char*           kalloc(void);
-void            kfree(char*);
-void            kinit1(void*, void*);
-void            kinit2(void*, void*);
-void            kmem_init (void);
 
 // log.c
 void            initlog(void);

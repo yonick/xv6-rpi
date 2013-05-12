@@ -36,7 +36,7 @@ void kmain (void)
     cpu = &cpus[0];
 
     kmem_init ();
-    kinit2(P2V(INIT_KERNMAP), P2V(PHYSTOP));
+    kmem_init2(P2V(INIT_KERNMAP), P2V(PHYSTOP));
 
     trap_init ();				// vector table and stacks for models
     pic_init (P2V(VIC_BASE));	// interrupt controller
