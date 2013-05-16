@@ -15,7 +15,7 @@
 // free blocks (for each order), thus allowing fast allocation. There is
 // about 8% overhead (maximum) for this structure.
 
-#define MAX_ORD      12
+#define MAX_ORD      16
 #define MIN_ORD      6
 #define N_ORD        (MAX_ORD - MIN_ORD +1)
 
@@ -247,6 +247,7 @@ void *kmalloc (int order)
     uint8         *up;
 
     if ((order > MAX_ORD) || (order < MIN_ORD)) {
+        cprintf("kmalloc: order - %d\n", order);
         panic("kmalloc: order out of range\n");
     }
 
@@ -328,6 +329,7 @@ int get_order (uint32 v)
     if (ord < MIN_ORD) {
         ord = MIN_ORD;
     } else if (ord > MAX_ORD) {
+        cprintf ("get_order: %d (%d)\n", v, ord);
         panic ("order too big!");
     }
     

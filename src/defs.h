@@ -10,6 +10,8 @@
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
 
+#include "string.h"
+
 struct buf;
 struct context;
 struct file;
@@ -167,7 +169,8 @@ void            release(struct spinlock*);
 // string.c
 int             memcmp(const void*, const void*, uint);
 void*           memmove(void*, const void*, uint);
-void*           memset(void*, int, uint);
+void*           memset(void*, int, int);
+void*           memcpy(void *dst, const void *src, uint n);
 char*           safestrcpy(char*, const char*, int);
 int             strlen(const char*);
 int             strncmp(const char*, const char*, uint);

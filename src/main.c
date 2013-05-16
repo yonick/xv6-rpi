@@ -51,9 +51,9 @@ void kmain (void)
 
     timer_init (HZ);			// the timer (ticker)
     sti ();
-
     info ();
-
+    usb_inithc ();
+    
     userinit();					// first user process
     scheduler();				// start running processes
 }

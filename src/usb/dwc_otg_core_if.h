@@ -1,35 +1,3 @@
-/* ==========================================================================
- * $File: //dwh/usb_iip/dev/software/otg/linux/drivers/dwc_otg_core_if.h $
- * $Revision: #4 $
- * $Date: 2008/12/18 $
- * $Change: 1155299 $
- *
- * Synopsys HS OTG Linux Software Driver and documentation (hereinafter,
- * "Software") is an Unsupported proprietary work of Synopsys, Inc. unless
- * otherwise expressly agreed to in writing between Synopsys and you.
- *
- * The Software IS NOT an item of Licensed Software or Licensed Product under
- * any End User Software License Agreement or Agreement for Licensed Product
- * with Synopsys or any supplement thereto. You are permitted to use and
- * redistribute this Software in source and binary forms, with or without
- * modification, provided that redistributions of source code must retain this
- * notice. You may not view, use, disclose, copy or distribute this file or
- * any information contained herein except pursuant to this license grant from
- * Synopsys. If you do not agree with this notice, including the disclaimer
- * below, then you are not authorized to use the Software.
- *
- * THIS SOFTWARE IS BEING DISTRIBUTED BY SYNOPSYS SOLELY ON AN "AS IS" BASIS
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE HEREBY DISCLAIMED. IN NO EVENT SHALL SYNOPSYS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
- * DAMAGE.
- * ========================================================================== */
 #if !defined(__DWC_CORE_IF_H__)
 #define __DWC_CORE_IF_H__
 
@@ -84,7 +52,7 @@ typedef struct dwc_otg_core_params {
 	 * 1 - Full Speed
 	 */
 	int32 speed;
-	/** Specifies whether low power mode is supported when attached 
+	/** Specifies whether low power mode is supported when attached
 	 *	to a Full Speed or Low Speed device in host mode.
 	 * 0 - Don't support low power mode (default)
 	 * 1 - Support low power mode
@@ -107,21 +75,21 @@ typedef struct dwc_otg_core_params {
 	 */
 	int32 enable_dynamic_fifo;
 
-	/** Total number of 4-byte words in the data FIFO memory. This 
-	 * memory includes the Rx FIFO, non-periodic Tx FIFO, and periodic 
+	/** Total number of 4-byte words in the data FIFO memory. This
+	 * memory includes the Rx FIFO, non-periodic Tx FIFO, and periodic
 	 * Tx FIFOs.
 	 * 32 to 32768 (default 8192)
 	 * Note: The total FIFO memory depth in the FPGA configuration is 8192.
 	 */
 	int32 data_fifo_size;
 
-	/** Number of 4-byte words in the Rx FIFO in device mode when dynamic 
+	/** Number of 4-byte words in the Rx FIFO in device mode when dynamic
 	 * FIFO sizing is enabled.
 	 * 16 to 32768 (default 1064)
 	 */
 	int32 dev_rx_fifo_size;
 
-	/** Number of 4-byte words in the non-periodic Tx FIFO in device mode 
+	/** Number of 4-byte words in the non-periodic Tx FIFO in device mode
 	 * when dynamic FIFO sizing is enabled.
 	 * 16 to 32768 (default 1024)
 	 */
@@ -133,66 +101,66 @@ typedef struct dwc_otg_core_params {
 	 */
 	uint32 dev_perio_tx_fifo_size[MAX_PERIO_FIFOS];
 
-	/** Number of 4-byte words in the Rx FIFO in host mode when dynamic 
+	/** Number of 4-byte words in the Rx FIFO in host mode when dynamic
 	 * FIFO sizing is enabled.
-	 * 16 to 32768 (default 1024)  
+	 * 16 to 32768 (default 1024)
 	 */
 	int32 host_rx_fifo_size;
 
-		/** Number of 4-byte words in the non-periodic Tx FIFO in host mode 
-	 * when Dynamic FIFO sizing is enabled in the core. 
+    /** Number of 4-byte words in the non-periodic Tx FIFO in host mode
+	 * when Dynamic FIFO sizing is enabled in the core.
 	 * 16 to 32768 (default 1024)
 	 */
 	int32 host_nperio_tx_fifo_size;
 
-	/** Number of 4-byte words in the host periodic Tx FIFO when dynamic 
-	 * FIFO sizing is enabled. 
+	/** Number of 4-byte words in the host periodic Tx FIFO when dynamic
+	 * FIFO sizing is enabled.
 	 * 16 to 32768 (default 1024)
 	 */
 	int32 host_perio_tx_fifo_size;
 
-	/** The maximum transfer size supported in bytes.  
-	 * 2047 to 65,535  (default 65,535)
+	/** The maximum transfer size supported in bytes.
+	 * 2047 to 65, 535  (default 65,535)
 	 */
 	int32 max_transfer_size;
 
-	/** The maximum number of packets in a transfer.  
+	/** The maximum number of packets in a transfer.
 	 * 15 to 511  (default 511)
 	 */
 	int32 max_packet_count;
 
-	/** The number of host channel registers to use.  
-	 * 1 to 16 (default 12) 
+	/** The number of host channel registers to use.
+	 * 1 to 16 (default 12)
 	 * Note: The FPGA configuration supports a maximum of 12 host channels.
 	 */
 	int32 host_channels;
 
-	/** The number of endpoints in addition to EP0 available for device 
-	 * mode operations. 
-	 * 1 to 15 (default 6 IN and OUT) 
-	 * Note: The FPGA configuration supports a maximum of 6 IN and OUT 
+	/** The number of endpoints in addition to EP0 available for device
+	 * mode operations.
+	 * 1 to 15 (default 6 IN and OUT)
+	 * Note: The FPGA configuration supports a maximum of 6 IN and OUT
 	 * endpoints in addition to EP0.
 	 */
 	int32 dev_endpoints;
 
-		/** 
-		 * Specifies the type of PHY interface to use. By default, the driver
-		 * will automatically detect the phy_type.
-		 * 
-		 * 0 - Full Speed PHY
-		 * 1 - UTMI+ (default)
-		 * 2 - ULPI
-		 */
-	int32 phy_type;
+    /**
+     * Specifies the type of PHY interface to use. By default, the driver
+     * will automatically detect the phy_type.
+     *
+     * 0 - Full Speed PHY
+     * 1 - UTMI+ (default)
+     * 2 - ULPI
+     */
+	int32                                         phy_type;
 
 	/**
 	 * Specifies the UTMI+ Data Width.	This parameter is
 	 * applicable for a PHY_TYPE of UTMI+ or ULPI. (For a ULPI
-	 * PHY_TYPE, this parameter indicates the data width between
+	 *    PHY_TYPE,                         this parameter indicates the data width between
 	 * the MAC and the ULPI Wrapper.) Also, this parameter is
 	 * applicable only if the OTG_HSPHY_WIDTH cC parameter was set
-	 * to "8 and 16 bits", meaning that the core has been
-	 * configured to work at either data path width. 
+	 * to "8 and 16 bits",                  meaning that the core has been
+	 * configured to work at either data path width.
 	 *
 	 * 8 or 16 bits (default 16)
 	 */
@@ -202,7 +170,7 @@ typedef struct dwc_otg_core_params {
 	 * Specifies whether the ULPI operates at double or single
 	 * data rate. This parameter is only applicable if PHY_TYPE is
 	 * ULPI.
-	 * 
+	 *
 	 * 0 - single data rate ULPI interface with 8 bit wide data
 	 * bus (default)
 	 * 1 - double data rate ULPI interface with 4 bit wide data
@@ -211,7 +179,7 @@ typedef struct dwc_otg_core_params {
 	int32 phy_ulpi_ddr;
 
 	/**
-	 * Specifies whether to use the internal or external supply to 
+	 * Specifies whether to use the internal or external supply to
 	 * drive the vbus with a ULPI phy.
 	 */
 	int32 phy_ulpi_ext_vbus;
@@ -229,9 +197,9 @@ typedef struct dwc_otg_core_params {
 	int32 ts_dline;
 
 	/**
-	 * Specifies whether dedicated transmit FIFOs are 
+	 * Specifies whether dedicated transmit FIFOs are
 	 * enabled for non periodic IN endpoints in device mode
-	 * 0 - No 
+	 * 0 - No
 	 * 1 - Yes
 	 */
 	int32 en_multiple_tx_fifo;
@@ -242,19 +210,19 @@ typedef struct dwc_otg_core_params {
 	 */
 	uint32 dev_tx_fifo_size[MAX_TX_FIFOS];
 
-	/** Thresholding enable flag- 
+	/** Thresholding enable flag-
 	 * bit 0 - enable non-ISO Tx thresholding
 	 * bit 1 - enable ISO Tx thresholding
 	 * bit 2 - enable Rx thresholding
 	 */
 	uint32 thr_ctl;
 
-	/** Thresholding length for Tx 
+	/** Thresholding length for Tx
 	 *	FIFOs in 32 bit DWORDs
 	 */
 	uint32 tx_thr_length;
 
-	/** Thresholding length for Rx 
+	/** Thresholding length for Rx
 	 *	FIFOs in 32 bit DWORDs
 	 */
 	uint32 rx_thr_length;
@@ -264,14 +232,14 @@ typedef struct dwc_otg_core_params {
 	 */
 	int32 lpm_enable;
 
-	/** Per Transfer Interrupt 
+	/** Per Transfer Interrupt
 	 *	mode enable flag
 	 * 1 - Enabled
 	 * 0 - Disabled
 	 */
 	int32 pti_enable;
 
-	/** Multi Processor Interrupt 
+	/** Multi Processor Interrupt
 	 *	mode enable flag
 	 * 1 - Enabled
 	 * 0 - Disabled
@@ -285,7 +253,7 @@ typedef struct dwc_otg_core_params {
 	int32 ic_usb_cap;
 
 	/** AHB Threshold Ratio
-	 * 2'b00 AHB Threshold = 	MAC Threshold
+	 * 2'b00 AHB Threshold = MAC Threshold
 	 * 2'b01 AHB Threshold = 1/2 	MAC Threshold
 	 * 2'b10 AHB Threshold = 1/4	MAC Threshold
 	 * 2'b11 AHB Threshold = 1/8	MAC Threshold
@@ -326,7 +294,7 @@ struct dwc_otg_core_if {
 	/** Push/pop addresses for endpoints or host channels.*/
 	uint32 *data_fifo[MAX_EPS_CHANNELS];
 #define DWC_OTG_DATA_FIFO_OFFSET 0x1000
-#define DWC_OTG_DATA_FIFO_SIZE 0x1000
+#define DWC_OTG_DATA_FIFO_SIZE   0x1000
 
 	/** Total RAM for FIFOs (Bytes) */
 	uint16 total_fifo_size;
@@ -428,10 +396,10 @@ uint32 dwc_read_reg32(volatile uint32 *addr);
  */
 extern int dwc_otg_set_param_otg_cap(dwc_otg_core_if_t * core_if, int32 val);
 extern int32 dwc_otg_get_param_otg_cap(dwc_otg_core_if_t * core_if);
-#define DWC_OTG_CAP_PARAM_HNP_SRP_CAPABLE 0
-#define DWC_OTG_CAP_PARAM_SRP_ONLY_CAPABLE 1
+#define DWC_OTG_CAP_PARAM_HNP_SRP_CAPABLE    0
+#define DWC_OTG_CAP_PARAM_SRP_ONLY_CAPABLE   1
 #define DWC_OTG_CAP_PARAM_NO_HNP_SRP_CAPABLE 2
-#define dwc_param_otg_cap_default DWC_OTG_CAP_PARAM_HNP_SRP_CAPABLE
+#define dwc_param_otg_cap_default            DWC_OTG_CAP_PARAM_HNP_SRP_CAPABLE
 
 extern int dwc_otg_set_param_opt(dwc_otg_core_if_t * core_if, int32 val);
 extern int32 dwc_otg_get_param_opt(dwc_otg_core_if_t * core_if);
@@ -442,10 +410,10 @@ extern int32 dwc_otg_get_param_opt(dwc_otg_core_if_t * core_if);
  * FIFOs. The driver will automatically detect the value for this
  * parameter if none is specified.
  * 0 - Slave
- * 1 - DMA (default, if available)
+ * 1 - DMA (default, if                                     available)
  */
 extern int dwc_otg_set_param_dma_enable(dwc_otg_core_if_t * core_if,
-					int32 val);
+                                        int32               val);
 extern int32 dwc_otg_get_param_dma_enable(dwc_otg_core_if_t * core_if);
 #define dwc_param_dma_enable_default 1
 
@@ -455,11 +423,11 @@ extern int32 dwc_otg_get_param_dma_enable(dwc_otg_core_if_t * core_if);
  * FIFOs in device mode. The driver will automatically detect
  * the value for this parameter if none is specified.
  * 0 - address DMA
- * 1 - DMA Descriptor(default, if available)
+ * 1 - DMA Descriptor(default, if                                available)
  */
 extern int dwc_otg_set_param_dma_desc_enable(dwc_otg_core_if_t * core_if,
-					     int32 val);
-extern int32 dwc_otg_get_param_dma_desc_enable(dwc_otg_core_if_t * core_if);
+                                             int32               val);
+extern int32                                                     dwc_otg_get_param_dma_desc_enable(dwc_otg_core_if_t * core_if);
 //#define dwc_param_dma_desc_enable_default 1
 #define dwc_param_dma_desc_enable_default 0 // Broadcom BCM2708
 
@@ -467,8 +435,8 @@ extern int32 dwc_otg_get_param_dma_desc_enable(dwc_otg_core_if_t * core_if);
  * Mode). 1, 4, 8 16, 32, 64, 128, 256 (default 32)
  */
 extern int dwc_otg_set_param_dma_burst_size(dwc_otg_core_if_t * core_if,
-					    int32 val);
-extern int32 dwc_otg_get_param_dma_burst_size(dwc_otg_core_if_t * core_if);
+                                            int32               val);
+extern int32                                                    dwc_otg_get_param_dma_burst_size(dwc_otg_core_if_t * core_if);
 #define dwc_param_dma_burst_size_default 32
 
 /**
@@ -479,11 +447,11 @@ extern int32 dwc_otg_get_param_dma_burst_size(dwc_otg_core_if_t * core_if);
  * 0 - High Speed (default)
  * 1 - Full Speed
  */
-extern int dwc_otg_set_param_speed(dwc_otg_core_if_t * core_if, int32 val);
+extern int   dwc_otg_set_param_speed(dwc_otg_core_if_t * core_if, int32 val);
 extern int32 dwc_otg_get_param_speed(dwc_otg_core_if_t * core_if);
 #define dwc_param_speed_default 0
-#define DWC_SPEED_PARAM_HIGH 0
-#define DWC_SPEED_PARAM_FULL 1
+#define DWC_SPEED_PARAM_HIGH    0
+#define DWC_SPEED_PARAM_FULL    1
 
 /** Specifies whether low power mode is supported when attached
  *	to a Full Speed or Low Speed device in host mode.
@@ -491,9 +459,9 @@ extern int32 dwc_otg_get_param_speed(dwc_otg_core_if_t * core_if);
  * 1 - Support low power mode
  */
 extern int dwc_otg_set_param_host_support_fs_ls_low_power(dwc_otg_core_if_t *
-							  core_if, int32 val);
+                                                          core_if, int32 val);
 extern int32 dwc_otg_get_param_host_support_fs_ls_low_power(dwc_otg_core_if_t
-							      * core_if);
+                                                            *            core_if);
 #define dwc_param_host_support_fs_ls_low_power_default 0
 
 /** Specifies the PHY clock rate in low power mode when connected to a
@@ -505,21 +473,21 @@ extern int32 dwc_otg_get_param_host_support_fs_ls_low_power(dwc_otg_core_if_t
  * 1 - 6 MHz
  */
 extern int dwc_otg_set_param_host_ls_low_power_phy_clk(dwc_otg_core_if_t *
-						       core_if, int32 val);
+                                                       core_if, int32 val);
 extern int32 dwc_otg_get_param_host_ls_low_power_phy_clk(dwc_otg_core_if_t *
-							   core_if);
+                                                         core_if);
 #define dwc_param_host_ls_low_power_phy_clk_default 0
-#define DWC_HOST_LS_LOW_POWER_PHY_CLK_PARAM_48MHZ 0
-#define DWC_HOST_LS_LOW_POWER_PHY_CLK_PARAM_6MHZ 1
+#define DWC_HOST_LS_LOW_POWER_PHY_CLK_PARAM_48MHZ   0
+#define DWC_HOST_LS_LOW_POWER_PHY_CLK_PARAM_6MHZ    1
 
 /**
  * 0 - Use cC FIFO size parameters
  * 1 - Allow dynamic FIFO sizing (default)
  */
 extern int dwc_otg_set_param_enable_dynamic_fifo(dwc_otg_core_if_t * core_if,
-						 int32 val);
+                                                 int32               val);
 extern int32 dwc_otg_get_param_enable_dynamic_fifo(dwc_otg_core_if_t *
-						     core_if);
+                                                   core_if);
 #define dwc_param_enable_dynamic_fifo_default 1
 
 /** Total number of 4-byte words in the data FIFO memory. This
@@ -529,8 +497,8 @@ extern int32 dwc_otg_get_param_enable_dynamic_fifo(dwc_otg_core_if_t *
  * Note: The total FIFO memory depth in the FPGA configuration is 8192.
  */
 extern int dwc_otg_set_param_data_fifo_size(dwc_otg_core_if_t * core_if,
-					    int32 val);
-extern int32 dwc_otg_get_param_data_fifo_size(dwc_otg_core_if_t * core_if);
+                                            int32               val);
+extern int32                                                    dwc_otg_get_param_data_fifo_size(dwc_otg_core_if_t * core_if);
 //#define dwc_param_data_fifo_size_default 8192
 #define dwc_param_data_fifo_size_default 0xFF0 // Broadcom BCM2708
 
@@ -539,8 +507,8 @@ extern int32 dwc_otg_get_param_data_fifo_size(dwc_otg_core_if_t * core_if);
  * 16 to 32768 (default 1064)
  */
 extern int dwc_otg_set_param_dev_rx_fifo_size(dwc_otg_core_if_t * core_if,
-					      int32 val);
-extern int32 dwc_otg_get_param_dev_rx_fifo_size(dwc_otg_core_if_t * core_if);
+                                              int32               val);
+extern int32                                                      dwc_otg_get_param_dev_rx_fifo_size(dwc_otg_core_if_t * core_if);
 #define dwc_param_dev_rx_fifo_size_default 1064
 
 /** Number of 4-byte words in the non-periodic Tx FIFO in device mode
@@ -548,9 +516,9 @@ extern int32 dwc_otg_get_param_dev_rx_fifo_size(dwc_otg_core_if_t * core_if);
  * 16 to 32768 (default 1024)
  */
 extern int dwc_otg_set_param_dev_nperio_tx_fifo_size(dwc_otg_core_if_t *
-						     core_if, int32 val);
+                                                     core_if, int32 val);
 extern int32 dwc_otg_get_param_dev_nperio_tx_fifo_size(dwc_otg_core_if_t *
-							 core_if);
+                                                       core_if);
 #define dwc_param_dev_nperio_tx_fifo_size_default 1024
 
 /** Number of 4-byte words in each of the periodic Tx FIFOs in device
@@ -558,9 +526,9 @@ extern int32 dwc_otg_get_param_dev_nperio_tx_fifo_size(dwc_otg_core_if_t *
  * 4 to 768 (default 256)
  */
 extern int dwc_otg_set_param_dev_perio_tx_fifo_size(dwc_otg_core_if_t * core_if,
-						    int32 val, int fifo_num);
+                                                    int32          val, int fifo_num);
 extern int32 dwc_otg_get_param_dev_perio_tx_fifo_size(dwc_otg_core_if_t *
-							core_if, int fifo_num);
+                                                      core_if,          int fifo_num);
 #define dwc_param_dev_perio_tx_fifo_size_default 256
 
 /** Number of 4-byte words in the Rx FIFO in host mode when dynamic
@@ -568,8 +536,8 @@ extern int32 dwc_otg_get_param_dev_perio_tx_fifo_size(dwc_otg_core_if_t *
  * 16 to 32768 (default 1024)
  */
 extern int dwc_otg_set_param_host_rx_fifo_size(dwc_otg_core_if_t * core_if,
-					       int32 val);
-extern int32 dwc_otg_get_param_host_rx_fifo_size(dwc_otg_core_if_t * core_if);
+                                               int32               val);
+extern int32                                                       dwc_otg_get_param_host_rx_fifo_size(dwc_otg_core_if_t * core_if);
 //#define dwc_param_host_rx_fifo_size_default 1024
 #define dwc_param_host_rx_fifo_size_default 774 // Broadcom BCM2708
 
@@ -578,9 +546,9 @@ extern int32 dwc_otg_get_param_host_rx_fifo_size(dwc_otg_core_if_t * core_if);
  * 16 to 32768 (default 1024)
  */
 extern int dwc_otg_set_param_host_nperio_tx_fifo_size(dwc_otg_core_if_t *
-						      core_if, int32 val);
+                                                      core_if, int32 val);
 extern int32 dwc_otg_get_param_host_nperio_tx_fifo_size(dwc_otg_core_if_t *
-							  core_if);
+                                                        core_if);
 //#define dwc_param_host_nperio_tx_fifo_size_default 1024
 #define dwc_param_host_nperio_tx_fifo_size_default 0x100 // Broadcom BCM2708
 
@@ -589,26 +557,26 @@ extern int32 dwc_otg_get_param_host_nperio_tx_fifo_size(dwc_otg_core_if_t *
  * 16 to 32768 (default 1024)
  */
 extern int dwc_otg_set_param_host_perio_tx_fifo_size(dwc_otg_core_if_t *
-						     core_if, int32 val);
+                                                     core_if, int32 val);
 extern int32 dwc_otg_get_param_host_perio_tx_fifo_size(dwc_otg_core_if_t *
-							 core_if);
+                                                       core_if);
 //#define dwc_param_host_perio_tx_fifo_size_default 1024
 #define dwc_param_host_perio_tx_fifo_size_default 0x200 // Broadcom BCM2708
 
 /** The maximum transfer size supported in bytes.
- * 2047 to 65,535  (default 65,535)
+ * 2047 to 65, 535  (default 65, 535)
  */
 extern int dwc_otg_set_param_max_transfer_size(dwc_otg_core_if_t * core_if,
-					       int32 val);
-extern int32 dwc_otg_get_param_max_transfer_size(dwc_otg_core_if_t * core_if);
+                                               int32               val);
+extern int32                                                       dwc_otg_get_param_max_transfer_size(dwc_otg_core_if_t * core_if);
 #define dwc_param_max_transfer_size_default 65535
 
 /** The maximum number of packets in a transfer.
  * 15 to 511  (default 511)
  */
 extern int dwc_otg_set_param_max_packet_count(dwc_otg_core_if_t * core_if,
-					      int32 val);
-extern int32 dwc_otg_get_param_max_packet_count(dwc_otg_core_if_t * core_if);
+                                              int32               val);
+extern int32                                                      dwc_otg_get_param_max_packet_count(dwc_otg_core_if_t * core_if);
 #define dwc_param_max_packet_count_default 511
 
 /** The number of host channel registers to use.
@@ -616,19 +584,19 @@ extern int32 dwc_otg_get_param_max_packet_count(dwc_otg_core_if_t * core_if);
  * Note: The FPGA configuration supports a maximum of 12 host channels.
  */
 extern int dwc_otg_set_param_host_channels(dwc_otg_core_if_t * core_if,
-					   int32 val);
-extern int32 dwc_otg_get_param_host_channels(dwc_otg_core_if_t * core_if);
+                                           int32               val);
+extern int32                                                   dwc_otg_get_param_host_channels(dwc_otg_core_if_t * core_if);
 #define dwc_param_host_channels_default 12
 
 /** The number of endpoints in addition to EP0 available for device
  * mode operations.
- * 1 to 15 (default 6 IN and OUT)
+ * 1 to 15 (default 6 IN and                                   OUT)
  * Note: The FPGA configuration supports a maximum of 6 IN and OUT
  * endpoints in addition to EP0.
  */
 extern int dwc_otg_set_param_dev_endpoints(dwc_otg_core_if_t * core_if,
-					   int32 val);
-extern int32 dwc_otg_get_param_dev_endpoints(dwc_otg_core_if_t * core_if);
+                                           int32               val);
+extern int32                                                   dwc_otg_get_param_dev_endpoints(dwc_otg_core_if_t * core_if);
 #define dwc_param_dev_endpoints_default 6
 
 /**
@@ -639,29 +607,29 @@ extern int32 dwc_otg_get_param_dev_endpoints(dwc_otg_core_if_t * core_if);
  * 1 - UTMI+ (default)
  * 2 - ULPI
  */
-extern int dwc_otg_set_param_phy_type(dwc_otg_core_if_t * core_if, int32 val);
+extern int   dwc_otg_set_param_phy_type(dwc_otg_core_if_t * core_if, int32 val);
 extern int32 dwc_otg_get_param_phy_type(dwc_otg_core_if_t * core_if);
-#define DWC_PHY_TYPE_PARAM_FS 0
-#define DWC_PHY_TYPE_PARAM_UTMI 1
-#define DWC_PHY_TYPE_PARAM_ULPI 2
+#define DWC_PHY_TYPE_PARAM_FS      0
+#define DWC_PHY_TYPE_PARAM_UTMI    1
+#define DWC_PHY_TYPE_PARAM_ULPI    2
 #define dwc_param_phy_type_default DWC_PHY_TYPE_PARAM_UTMI
 
 /**
  * Specifies the UTMI+ Data Width.	This parameter is
  * applicable for a PHY_TYPE of UTMI+ or ULPI. (For a ULPI
- * PHY_TYPE, this parameter indicates the data width between
- * the MAC and the ULPI Wrapper.) Also, this parameter is
+ *                                                              PHY_TYPE, this parameter indicates the data width between
+ * the MAC and the ULPI Wrapper.) Also,                                   this parameter is
  * applicable only if the OTG_HSPHY_WIDTH cC parameter was set
- * to "8 and 16 bits", meaning that the core has been
+ * to "8 and 16 bits",                                                    meaning that the core has been
  * configured to work at either data path width.
  *
  * 8 or 16 bits (default 16)
  */
 extern int dwc_otg_set_param_phy_utmi_width(dwc_otg_core_if_t * core_if,
-					    int32 val);
-extern int32 dwc_otg_get_param_phy_utmi_width(dwc_otg_core_if_t * core_if);
+                                            int32               val);
+extern int32                                                    dwc_otg_get_param_phy_utmi_width(dwc_otg_core_if_t * core_if);
 //#define dwc_param_phy_utmi_width_default 16
-#define dwc_param_phy_utmi_width_default 8 // Broadcom BCM2708 
+#define dwc_param_phy_utmi_width_default 8 // Broadcom BCM2708
 
 /**
  * Specifies whether the ULPI operates at double or single
@@ -674,7 +642,7 @@ extern int32 dwc_otg_get_param_phy_utmi_width(dwc_otg_core_if_t * core_if);
  * bus
  */
 extern int dwc_otg_set_param_phy_ulpi_ddr(dwc_otg_core_if_t * core_if,
-					  int32 val);
+                                          int32               val);
 extern int32 dwc_otg_get_param_phy_ulpi_ddr(dwc_otg_core_if_t * core_if);
 #define dwc_param_phy_ulpi_ddr_default 0
 
@@ -683,10 +651,10 @@ extern int32 dwc_otg_get_param_phy_ulpi_ddr(dwc_otg_core_if_t * core_if);
  * drive the vbus with a ULPI phy.
  */
 extern int dwc_otg_set_param_phy_ulpi_ext_vbus(dwc_otg_core_if_t * core_if,
-					       int32 val);
+                                               int32 val);
 extern int32 dwc_otg_get_param_phy_ulpi_ext_vbus(dwc_otg_core_if_t * core_if);
-#define DWC_PHY_ULPI_INTERNAL_VBUS 0
-#define DWC_PHY_ULPI_EXTERNAL_VBUS 1
+#define DWC_PHY_ULPI_INTERNAL_VBUS          0
+#define DWC_PHY_ULPI_EXTERNAL_VBUS          1
 #define dwc_param_phy_ulpi_ext_vbus_default DWC_PHY_ULPI_INTERNAL_VBUS
 
 /**
@@ -696,13 +664,13 @@ extern int32 dwc_otg_get_param_phy_ulpi_ext_vbus(dwc_otg_core_if_t * core_if);
  * 1 - Yes
  */
 extern int dwc_otg_set_param_i2c_enable(dwc_otg_core_if_t * core_if,
-					int32 val);
-extern int32 dwc_otg_get_param_i2c_enable(dwc_otg_core_if_t * core_if);
+                                        int32               val);
+extern int32                                                dwc_otg_get_param_i2c_enable(dwc_otg_core_if_t * core_if);
 #define dwc_param_i2c_enable_default 0
 
 extern int dwc_otg_set_param_ulpi_fs_ls(dwc_otg_core_if_t * core_if,
-					int32 val);
-extern int32 dwc_otg_get_param_ulpi_fs_ls(dwc_otg_core_if_t * core_if);
+                                        int32 val);
+extern int32                                  dwc_otg_get_param_ulpi_fs_ls(dwc_otg_core_if_t * core_if);
 #define dwc_param_ulpi_fs_ls_default 0
 
 extern int dwc_otg_set_param_ts_dline(dwc_otg_core_if_t * core_if, int32 val);
@@ -716,19 +684,19 @@ extern int32 dwc_otg_get_param_ts_dline(dwc_otg_core_if_t * core_if);
  * 1 - Yes
  */
 extern int dwc_otg_set_param_en_multiple_tx_fifo(dwc_otg_core_if_t * core_if,
-						 int32 val);
+                                                 int32               val);
 extern int32 dwc_otg_get_param_en_multiple_tx_fifo(dwc_otg_core_if_t *
-						     core_if);
+                                                   core_if);
 #define dwc_param_en_multiple_tx_fifo_default 1
 
 /** Number of 4-byte words in each of the Tx FIFOs in device
  * mode when dynamic FIFO sizing is enabled.
  * 4 to 768 (default 256)
  */
-extern int dwc_otg_set_param_dev_tx_fifo_size(dwc_otg_core_if_t * core_if,
-					      int fifo_num, int32 val);
+extern int dwc_otg_set_param_dev_tx_fifo_size(dwc_otg_core_if_t *   core_if,
+                                              int                   fifo_num, int32 val);
 extern int32 dwc_otg_get_param_dev_tx_fifo_size(dwc_otg_core_if_t * core_if,
-						  int fifo_num);
+                                                int fifo_num);
 #define dwc_param_dev_tx_fifo_size_default 256
 
 /** Thresholding enable flag-
@@ -736,31 +704,31 @@ extern int32 dwc_otg_get_param_dev_tx_fifo_size(dwc_otg_core_if_t * core_if,
  * bit 1 - enable ISO Tx thresholding
  * bit 2 - enable Rx thresholding
  */
-extern int dwc_otg_set_param_thr_ctl(dwc_otg_core_if_t * core_if, int32 val);
-extern int32 dwc_otg_get_thr_ctl(dwc_otg_core_if_t * core_if, int fifo_num);
+extern int   dwc_otg_set_param_thr_ctl(dwc_otg_core_if_t * core_if, int32 val);
+extern int32 dwc_otg_get_thr_ctl(dwc_otg_core_if_t * core_if,       int fifo_num);
 #define dwc_param_thr_ctl_default 0
 
 /** Thresholding length for Tx
  * FIFOs in 32 bit DWORDs
  */
 extern int dwc_otg_set_param_tx_thr_length(dwc_otg_core_if_t * core_if,
-					   int32 val);
-extern int32 dwc_otg_get_tx_thr_length(dwc_otg_core_if_t * core_if);
+                                           int32               val);
+extern int32                                                   dwc_otg_get_tx_thr_length(dwc_otg_core_if_t * core_if);
 #define dwc_param_tx_thr_length_default 64
 
 /** Thresholding length for Rx
  *	FIFOs in 32 bit DWORDs
  */
 extern int dwc_otg_set_param_rx_thr_length(dwc_otg_core_if_t * core_if,
-					   int32 val);
-extern int32 dwc_otg_get_rx_thr_length(dwc_otg_core_if_t * core_if);
+                                           int32               val);
+extern int32                                                   dwc_otg_get_rx_thr_length(dwc_otg_core_if_t * core_if);
 #define dwc_param_rx_thr_length_default 64
 
 /**
  * Specifies whether LPM (Link Power Management) support is enabled
  */
 extern int dwc_otg_set_param_lpm_enable(dwc_otg_core_if_t * core_if,
-					int32 val);
+                                        int32 val);
 extern int32 dwc_otg_get_param_lpm_enable(dwc_otg_core_if_t * core_if);
 #define dwc_param_lpm_enable_default 0
 
@@ -768,24 +736,24 @@ extern int32 dwc_otg_get_param_lpm_enable(dwc_otg_core_if_t * core_if);
  * Specifies whether PTI enhancement is enabled
  */
 extern int dwc_otg_set_param_pti_enable(dwc_otg_core_if_t * core_if,
-					int32 val);
-extern int32 dwc_otg_get_param_pti_enable(dwc_otg_core_if_t * core_if);
+                                        int32 val);
+extern int32                                                dwc_otg_get_param_pti_enable(dwc_otg_core_if_t * core_if);
 #define dwc_param_pti_enable_default 0
 
 /**
  * Specifies whether MPI enhancement is enabled
  */
 extern int dwc_otg_set_param_mpi_enable(dwc_otg_core_if_t * core_if,
-					int32 val);
-extern int32 dwc_otg_get_param_mpi_enable(dwc_otg_core_if_t * core_if);
+                                        int32 val);
+extern int32                                  dwc_otg_get_param_mpi_enable(dwc_otg_core_if_t * core_if);
 #define dwc_param_mpi_enable_default 0
 
 /**
  * Specifies whether IC_USB capability is enabled
  */
 extern int dwc_otg_set_param_ic_usb_cap(dwc_otg_core_if_t * core_if,
-					int32 val);
-extern int32 dwc_otg_get_param_ic_usb_cap(dwc_otg_core_if_t * core_if);
+                                        int32 val);
+extern int32                                                dwc_otg_get_param_ic_usb_cap(dwc_otg_core_if_t * core_if);
 #define dwc_param_ic_usb_cap_default 0
 
 extern int dwc_otg_set_param_ahb_thr_ratio(dwc_otg_core_if_t * core_if, int32 val);
@@ -828,7 +796,7 @@ extern uint32 dwc_otg_get_gsnpsid(dwc_otg_core_if_t * core_if);
  * Get current mode.
  * Returns 0 if in device mode, and 1 if in host mode.
  */
-extern uint32 dwc_otg_get_mode(dwc_otg_core_if_t * core_if);
+extern uint32             dwc_otg_get_mode(dwc_otg_core_if_t * core_if);
 
 /**
  * Get value of hnpcapable field in the GUSBCFG register
@@ -837,7 +805,7 @@ extern uint32 dwc_otg_get_hnpcapable(dwc_otg_core_if_t * core_if);
 /**
  * Set value of hnpcapable field in the GUSBCFG register
  */
-extern void dwc_otg_set_hnpcapable(dwc_otg_core_if_t * core_if, uint32 val);
+extern void   dwc_otg_set_hnpcapable(dwc_otg_core_if_t * core_if, uint32 val);
 
 /**
  * Get value of srpcapable field in the GUSBCFG register
@@ -846,7 +814,7 @@ extern uint32 dwc_otg_get_srpcapable(dwc_otg_core_if_t * core_if);
 /**
  * Set value of srpcapable field in the GUSBCFG register
  */
-extern void dwc_otg_set_srpcapable(dwc_otg_core_if_t * core_if, uint32 val);
+extern void   dwc_otg_set_srpcapable(dwc_otg_core_if_t * core_if, uint32 val);
 
 /**
  * Get value of devspeed field in the DCFG register
@@ -855,7 +823,7 @@ extern uint32 dwc_otg_get_devspeed(dwc_otg_core_if_t * core_if);
 /**
  * Set value of devspeed field in the DCFG register
  */
-extern void dwc_otg_set_devspeed(dwc_otg_core_if_t * core_if, uint32 val);
+extern void   dwc_otg_set_devspeed(dwc_otg_core_if_t * core_if, uint32 val);
 
 /**
  * Get the value of busconnected field from the HPRT0 register
@@ -874,7 +842,7 @@ extern uint32 dwc_otg_get_prtpower(dwc_otg_core_if_t * core_if);
 /**
  * Set value of prtpwr field from the HPRT0 register
  */
-extern void dwc_otg_set_prtpower(dwc_otg_core_if_t * core_if, uint32 val);
+extern void   dwc_otg_set_prtpower(dwc_otg_core_if_t * core_if, uint32 val);
 
 /**
  * Get value of prtsusp field from the HPRT0 regsiter
@@ -947,40 +915,40 @@ extern void dwc_otg_set_gotgctl(dwc_otg_core_if_t * core_if, uint32 val);
  * GUSBCFG register
  */
 extern uint32 dwc_otg_get_gusbcfg(dwc_otg_core_if_t * core_if);
-extern void dwc_otg_set_gusbcfg(dwc_otg_core_if_t * core_if, uint32 val);
+extern void   dwc_otg_set_gusbcfg(dwc_otg_core_if_t * core_if, uint32 val);
 
 /**
  * GRXFSIZ register
  */
 extern uint32 dwc_otg_get_grxfsiz(dwc_otg_core_if_t * core_if);
-extern void dwc_otg_set_grxfsiz(dwc_otg_core_if_t * core_if, uint32 val);
+extern void   dwc_otg_set_grxfsiz(dwc_otg_core_if_t * core_if, uint32 val);
 
 /**
  * GNPTXFSIZ register
  */
 extern uint32 dwc_otg_get_gnptxfsiz(dwc_otg_core_if_t * core_if);
-extern void dwc_otg_set_gnptxfsiz(dwc_otg_core_if_t * core_if, uint32 val);
+extern void   dwc_otg_set_gnptxfsiz(dwc_otg_core_if_t * core_if, uint32 val);
 
 extern uint32 dwc_otg_get_gpvndctl(dwc_otg_core_if_t * core_if);
-extern void dwc_otg_set_gpvndctl(dwc_otg_core_if_t * core_if, uint32 val);
+extern void   dwc_otg_set_gpvndctl(dwc_otg_core_if_t * core_if, uint32 val);
 
 /**
  * GGPIO register
  */
 extern uint32 dwc_otg_get_ggpio(dwc_otg_core_if_t * core_if);
-extern void dwc_otg_set_ggpio(dwc_otg_core_if_t * core_if, uint32 val);
+extern void   dwc_otg_set_ggpio(dwc_otg_core_if_t * core_if, uint32 val);
 
 /**
  * GUID register
  */
 extern uint32 dwc_otg_get_guid(dwc_otg_core_if_t * core_if);
-extern void dwc_otg_set_guid(dwc_otg_core_if_t * core_if, uint32 val);
+extern void   dwc_otg_set_guid(dwc_otg_core_if_t * core_if, uint32 val);
 
 /**
  * HPRT0 register
  */
 extern uint32 dwc_otg_get_hprt0(dwc_otg_core_if_t * core_if);
-extern void dwc_otg_set_hprt0(dwc_otg_core_if_t * core_if, uint32 val);
+extern void   dwc_otg_set_hprt0(dwc_otg_core_if_t * core_if, uint32 val);
 extern uint32 dwc_otg_read_hprt0(dwc_otg_core_if_t * _core_if);
 
 /**
@@ -991,9 +959,9 @@ extern uint32 dwc_otg_get_hptxfsiz(dwc_otg_core_if_t * core_if);
 /**
  * Init channel @hc_num with provided parameters
  */
-extern void dwc_otg_hc_init(dwc_otg_core_if_t * core_if, uint8 hc_num,
-		uint8 dev_addr, uint8 ep_num, uint8 ep_is_in,
-		uint8 ep_type, uint16 max_packet);
+extern void dwc_otg_hc_init(dwc_otg_core_if_t * core_if,  uint8 hc_num,
+                            uint8               dev_addr, uint8 ep_num, uint8 ep_is_in,
+                            uint8               ep_type,  uint16 max_packet);
 
 
 /**

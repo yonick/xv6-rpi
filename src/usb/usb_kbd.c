@@ -1,38 +1,12 @@
-/*
- * (C) Copyright 2001
- * Denis Peter, MPL AG Switzerland
- *
- * Part of this source has been derived from the Linux USB
- * project.
- *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
- *
- */
-#include <common.h>
-#include <malloc.h>
-#include <stdio_dev.h>
-#include <asm/byteorder.h>
-
-#include <usb.h>
+#include "types.h"
+#include "defs.h"
+#include "param.h"
+#include "arm.h"
+#include "proc.h"
+#include "usb.h"
 
 #ifdef	USB_KBD_DEBUG
-#define USB_KBD_cprintf(fmt, args...)	cprintf(fmt, ##args)
+#define USB_KBD_cprintf(fmt, args...)	cprintf("USB kbd: "fmt, ##args)
 #else
 #define USB_KBD_cprintf(fmt, args...)
 #endif
@@ -103,7 +77,7 @@ static const unsigned char usb_kbd_num_keypad[] = {
 #define USB_KBD_CTRL		(1 << 3)
 
 #define USB_KBD_LEDMASK		\
-	(USB_KBD_NUMLOCK | USB_KBD_CAPSLOCK | USB_KBD_SCROLLLOCK)
+(USB_KBD_NUMLOCK | USB_KBD_CAPSLOCK | USB_KBD_SCROLLLOCK)
 
 struct usb_kbd_pdata {
 	uint32	repeat_delay;
@@ -140,7 +114,7 @@ void usb_kbd_generic_poll(void)
 	/* Submit a interrupt transfer request */
 	maxp = usb_maxpacket(usb_kbd_dev, pipe);
 	usb_submit_int_msg(usb_kbd_dev, pipe, data->new,
-			maxp > 8 ? 8 : maxp, ep->bInterval);
+                       maxp > 8 ? 8 : maxp, ep->bInterval);
 }
 
 /* Puts character in the queue and sets up the in and out pointer. */
@@ -175,14 +149,14 @@ static void usb_kbd_setled(struct usb_device *dev)
 	uint32 leds = data->flags & USB_KBD_LEDMASK;
 
 	usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
-		USB_REQ_SET_REPORT, USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		0x200, iface->desc.bInterfaceNumber, (void *)&leds, 1, 0);
+                    USB_REQ_SET_REPORT, USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                    0x200, iface->desc.bInterfaceNumber, (void *)&leds, 1, 0);
 }
 
 #define CAPITAL_MASK	0x20
 /* Translate the scancode in ASCII */
 static int usb_kbd_translate(struct usb_kbd_pdata *data, unsigned char scancode,
-				unsigned char modifier, int pressed)
+                             unsigned char modifier, int pressed)
 {
 	uint8 keycode = 0;
 
@@ -312,7 +286,7 @@ static int usb_kbd_irq(struct usb_device *dev)
 {
 	if ((dev->irq_status != 0) || (dev->irq_act_len != 8)) {
 		USB_KBD_cprintf("USB KBD: Error %lX, len %d\n",
-				dev->irq_status, dev->irq_act_len);
+                        dev->irq_status, dev->irq_act_len);
 		return 1;
 	}
 
@@ -338,7 +312,7 @@ static inline void usb_kbd_poll_for_event(struct usb_device *dev)
 	/* Submit a interrupt transfer request */
 	maxp = usb_maxpacket(dev, pipe);
 	usb_submit_int_msg(dev, pipe, &data->new[0],
-			maxp > 8 ? 8 : maxp, ep->bInterval);
+                       maxp > 8 ? 8 : maxp, ep->bInterval);
 
 	usb_kbd_irq_worker(dev);
 #elif	defined(CONFIG_SYS_USB_EVENT_POLL_VIA_CONTROL_EP)
@@ -346,7 +320,7 @@ static inline void usb_kbd_poll_for_event(struct usb_device *dev)
 	struct usb_kbd_pdata *data = dev->privptr;
 	iface = &dev->config.if_desc[0];
 	usb_get_report(dev, iface->desc.bInterfaceNumber,
-			1, 0, data->new, sizeof(data->new));
+                   1, 0, data->new, sizeof(data->new));
 	if (memcmp(data->old, data->new, sizeof(data->new)))
 		usb_kbd_irq_worker(dev);
 #endif
@@ -452,7 +426,7 @@ static int usb_kbd_probe(struct usb_device *dev, unsigned int ifnum)
 
 	USB_KBD_cprintf("USB KBD: enable interrupt pipe...\n");
 	usb_submit_int_msg(dev, pipe, data->new, maxp > 8 ? 8 : maxp,
-				ep->bInterval);
+                       ep->bInterval);
 
 	/* Success. */
 	return 1;
@@ -511,16 +485,16 @@ int drv_usb_kbd_init(void)
 		/* Check if this is the standard input device. */
 		if (strcmp(stdinname, DEVNAME))
 			return 1;
-
+        
 		/* Reassign the console */
 		if (overwrite_console())
 			return 1;
-
+        
 		error = console_assign(stdin, DEVNAME);
 		if (error)
 			return error;
 #endif
-
+        
 		return 1;
 	}
 

@@ -1,36 +1,3 @@
-/* ==========================================================================
- * $File: //dwh/usb_iip/dev/software/otg/linux/drivers/dwc_otg_regs.h $
- * $Revision: #76 $
- * $Date: 2009/04/02 $
- * $Change: 1224216 $
- *
- * Synopsys HS OTG Linux Software Driver and documentation (hereinafter,
- * "Software") is an Unsupported proprietary work of Synopsys, Inc. unless
- * otherwise expressly agreed to in writing between Synopsys and you.
- * 
- * The Software IS NOT an item of Licensed Software or Licensed Product under
- * any End User Software License Agreement or Agreement for Licensed Product
- * with Synopsys or any supplement thereto. You are permitted to use and
- * redistribute this Software in source and binary forms, with or without
- * modification, provided that redistributions of source code must retain this
- * notice. You may not view, use, disclose, copy or distribute this file or
- * any information contained herein except pursuant to this license grant from
- * Synopsys. If you do not agree with this notice, including the disclaimer
- * below, then you are not authorized to use the Software.
- * 
- * THIS SOFTWARE IS BEING DISTRIBUTED BY SYNOPSYS SOLELY ON AN "AS IS" BASIS
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE HEREBY DISCLAIMED. IN NO EVENT SHALL SYNOPSYS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
- * DAMAGE.
- * ========================================================================== */
-
 #ifndef __DWC_OTG_REGS_H__
 #define __DWC_OTG_REGS_H__
 
@@ -64,7 +31,7 @@
  */
 
 /****************************************************************************/
-/** DWC_otg Core registers .  
+/** DWC_otg Core registers .
  * The dwc_otg_core_global_regs structure defines the size
  * and relative field offsets for the Core Global registers.
  */
@@ -85,36 +52,51 @@ typedef struct dwc_otg_core_global_regs {
 
 	/**Core USB Configuration Register.	 <i>Offset: 00Ch</i> */
 	volatile uint32 gusbcfg;
+
 	/**Core Reset Register.	 <i>Offset: 010h</i> */
 	volatile uint32 grstctl;
-	/**Core Interrupt Register.	 <i>Offset: 014h</i> */
+
+    /**Core Interrupt Register.	 <i>Offset: 014h</i> */
 	volatile uint32 gintsts;
-	/**Core Interrupt Mask Register.  <i>Offset: 018h</i> */
+
+    /**Core Interrupt Mask Register.  <i>Offset: 018h</i> */
 	volatile uint32 gintmsk;
-	/**Receive Status Queue Read Register (Read Only).	<i>Offset: 01Ch</i> */
+
+    /**Receive Status Queue Read Register (Read Only).	<i>Offset: 01Ch</i> */
 	volatile uint32 grxstsr;
-	/**Receive Status Queue Read & POP Register (Read Only).  <i>Offset: 020h</i>*/
-	volatile uint32 grxstsp;
-	/**Receive FIFO Size Register.	<i>Offset: 024h</i> */
+
+    /**Receive Status Queue Read & POP Register (Read Only).  <i>Offset: 020h</i>*/
+    volatile uint32 grxstsp;
+
+    /**Receive FIFO Size Register.	<i>Offset: 024h</i> */
 	volatile uint32 grxfsiz;
-	/**Non Periodic Transmit FIFO Size Register.  <i>Offset: 028h</i> */
+
+    /**Non Periodic Transmit FIFO Size Register.  <i>Offset: 028h</i> */
 	volatile uint32 gnptxfsiz;
-	/**Non Periodic Transmit FIFO/Queue Status Register (Read
+
+    /**Non Periodic Transmit FIFO/Queue Status Register (Read
 	 * Only). <i>Offset: 02Ch</i> */
 	volatile uint32 gnptxsts;
-	/**I2C Access Register.	 <i>Offset: 030h</i> */
+
+    /**I2C Access Register.	 <i>Offset: 030h</i> */
 	volatile uint32 gi2cctl;
-	/**PHY Vendor Control Register.	 <i>Offset: 034h</i> */
+
+    /**PHY Vendor Control Register.	 <i>Offset: 034h</i> */
 	volatile uint32 gpvndctl;
-	/**General Purpose Input/Output Register.  <i>Offset: 038h</i> */
+
+    /**General Purpose Input/Output Register.  <i>Offset: 038h</i> */
 	volatile uint32 ggpio;
-	/**User ID Register.  <i>Offset: 03Ch</i> */
+
+    /**User ID Register.  <i>Offset: 03Ch</i> */
 	volatile uint32 guid;
-	/**Synopsys ID Register (Read Only).  <i>Offset: 040h</i> */
+
+    /**Synopsys ID Register (Read Only).  <i>Offset: 040h</i> */
 	volatile uint32 gsnpsid;
-	/**User HW Config1 Register (Read Only).  <i>Offset: 044h</i> */
+
+    /**User HW Config1 Register (Read Only).  <i>Offset: 044h</i> */
 	volatile uint32 ghwcfg1;
-	/**User HW Config2 Register (Read Only).  <i>Offset: 048h</i> */
+
+    /**User HW Config2 Register (Read Only).  <i>Offset: 048h</i> */
 	volatile uint32 ghwcfg2;
 #define DWC_SLAVE_ONLY_ARCH 0
 #define DWC_EXT_DMA_ARCH 1
@@ -130,23 +112,28 @@ typedef struct dwc_otg_core_global_regs {
 
 	/**User HW Config3 Register (Read Only).  <i>Offset: 04Ch</i> */
 	volatile uint32 ghwcfg3;
-	/**User HW Config4 Register (Read Only).  <i>Offset: 050h</i>*/
+
+    /**User HW Config4 Register (Read Only).  <i>Offset: 050h</i>*/
 	volatile uint32 ghwcfg4;
-	/** Core LPM Configuration register */
+
+    /** Core LPM Configuration register */
 	volatile uint32 glpmcfg;
-	/** Reserved  <i>Offset: 058h-0FFh</i> */
+
+    /** Reserved  <i>Offset: 058h-0FFh</i> */
 	volatile uint32 reserved[42];
-	/** Host Periodic Transmit FIFO Size Register. <i>Offset: 100h</i> */
+
+    /** Host Periodic Transmit FIFO Size Register. <i>Offset: 100h</i> */
 	volatile uint32 hptxfsiz;
-	/** Device Periodic Transmit FIFO#n Register if dedicated fifos are disabled, 
-		otherwise Device Transmit FIFO#n Register. 
+
+    /** Device Periodic Transmit FIFO#n Register if dedicated fifos are disabled,
+     otherwise Device Transmit FIFO#n Register.
 	 * <i>Offset: 104h + (FIFO_Number-1)*04h, 1 <= FIFO Number <= 15 (1<=n<=15).</i> */
 	volatile uint32 dptxfsiz_dieptxf[15];
 } dwc_otg_core_global_regs_t;
 
 /**
  * This union represents the bit fields of the Core OTG Control
- * and Status Register (GOTGCTL).  Set the bits using the bit 
+ * and Status Register (GOTGCTL).  Set the bits using the bit
  * fields then write the <i>d32</i> value to the register.
  */
 typedef union gotgctl_data {
@@ -179,6 +166,7 @@ typedef union gotgctl_data {
 typedef union gotgint_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		/** Current Mode */
@@ -216,6 +204,7 @@ typedef union gotgint_data {
 typedef union gahbcfg_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		unsigned glblintrmsk:1;
@@ -247,6 +236,7 @@ typedef union gahbcfg_data {
 typedef union gusbcfg_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		unsigned toutcal:3;
@@ -276,104 +266,120 @@ typedef union gusbcfg_data {
 } gusbcfg_data_t;
 
 /**
- * This union represents the bit fields of the Core LPM Configuration 
+ * This union represents the bit fields of the Core LPM Configuration
  * Register (GLPMCFG). Set the bits using bit fields then write
  * the <i>d32</i> value to the register.
  */
 typedef union glpmctl_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		/** LPM-Capable (LPMCap) (Device and Host)
-		 * The application uses this bit to control 
+		 * The application uses this bit to control
 		 * the DWC_otg core LPM capabilities.
 		 */
 		unsigned lpm_cap_en:1;
+
 		/** LPM response programmed by application (AppL1Res) (Device)
-		 * Handshake response to LPM token pre-programmed 
+		 * Handshake response to LPM token pre-programmed
 		 * by device application software.
 		 */
 		unsigned appl_resp:1;
+
 		/** Host Initiated Resume Duration (HIRD) (Device and Host)
-		 * In Host mode this field indicates the value of HIRD 
+		 * In Host mode this field indicates the value of HIRD
 		 * to be sent in an LPM transaction.
-		 * In Device mode this field is updated with the 
-		 * Received LPM Token HIRD bmAttribute 
-		 * when an ACK/NYET/STALL response is sent 
+		 * In Device mode this field is updated with the
+		 * Received LPM Token HIRD bmAttribute
+		 * when an ACK/NYET/STALL response is sent
 		 * to an LPM transaction.
 		 */
 		unsigned hird:4;
+
 		/** RemoteWakeEnable (bRemoteWake) (Device and Host)
-		 * In Host mode this bit indicates the value of remote 
+		 * In Host mode this bit indicates the value of remote
 		 * wake up to be sent in wIndex field of LPM transaction.
-		 * In Device mode this field is updated with the 
-		 * Received LPM Token bRemoteWake bmAttribute 
-		 * when an ACK/NYET/STALL response is sent 
+		 * In Device mode this field is updated with the
+		 * Received LPM Token bRemoteWake bmAttribute
+		 * when an ACK/NYET/STALL response is sent
 		 * to an LPM transaction.
 		 */
 		unsigned rem_wkup_en:1;
+
 		/** Enable utmi_sleep_n (EnblSlpM) (Device and Host)
-		 * The application uses this bit to control 
+		 * The application uses this bit to control
 		 * the utmi_sleep_n assertion to the PHY when in L1 state.
 		 */
 		unsigned en_utmi_sleep:1;
+
 		/** HIRD Threshold (HIRD_Thres) (Device and Host)
 		 */
 		unsigned hird_thres:5;
+
 		/** LPM Response (CoreL1Res) (Device and Host)
-		 * In Host mode this bit contains handsake response to 
+		 * In Host mode this bit contains handsake response to
 		 * LPM transaction.
-		 * In Device mode the response of the core to 
+		 * In Device mode the response of the core to
 		 * LPM transaction received is reflected in these two bits.
-		 	- 0x0 : ERROR (No handshake response)
-			- 0x1 : STALL
-			- 0x2 : NYET
-			- 0x3 : ACK			
+         - 0x0 : ERROR (No handshake response)
+         - 0x1 : STALL
+         - 0x2 : NYET
+         - 0x3 : ACK
 		 */
 		unsigned lpm_resp:2;
+
 		/** Port Sleep Status (SlpSts) (Device and Host)
-		 * This bit is set as long as a Sleep condition 
+		 * This bit is set as long as a Sleep condition
 		 * is present on the USB bus.
 		 */
 		unsigned prt_sleep_sts:1;
+
 		/** Sleep State Resume OK (L1ResumeOK) (Device and Host)
-		 * Indicates that the application or host 
+		 * Indicates that the application or host
 		 * can start resume from Sleep state.
 		 */
 		unsigned sleep_state_resumeok:1;
+
 		/** LPM channel Index (LPM_Chnl_Indx) (Host)
-		 * The channel number on which the LPM transaction 
-		 * has to be applied while sending 
+		 * The channel number on which the LPM transaction
+		 * has to be applied while sending
 		 * an LPM transaction to the local device.
 		 */
 		unsigned lpm_chan_index:4;
+
 		/** LPM Retry Count (LPM_Retry_Cnt) (Host)
 		 * Number host retries that would be performed
 		 * if the device response was not valid response.
 		 */
 		unsigned retry_count:3;
+
 		/** Send LPM Transaction (SndLPM) (Host)
-		 * When set by application software, 
-		 * an LPM transaction containing two tokens 
+		 * When set by application software,
+		 * an LPM transaction containing two tokens
 		 * is sent.
 		 */
 		unsigned send_lpm:1;
+
 		/** LPM Retry status (LPM_RetryCnt_Sts) (Host)
-		 * Number of LPM Host Retries still remaining 
+		 * Number of LPM Host Retries still remaining
 		 * to be transmitted for the current LPM sequence
 		 */
 		unsigned retry_count_sts:3;
+
 		unsigned reserved28_29:2;
+
 		/** In host mode once this bit is set, the host
-		 * configures to drive the HSIC Idle state on the bus. 
+		 * configures to drive the HSIC Idle state on the bus.
 		 * It then waits for the  device to initiate the Connect sequence.
-		 * In device mode once this bit is set, the device waits for 
-		 * the HSIC Idle line state on the bus. Upon receving the Idle 
+		 * In device mode once this bit is set, the device waits for
+		 * the HSIC Idle line state on the bus. Upon receving the Idle
 		 * line state, it initiates the HSIC Connect sequence.
 		 */
 		unsigned hsic_connect:1;
-		/** This bit overrides and functionally inverts 
+
+		/** This bit overrides and functionally inverts
 		 * the if_select_hsic input port signal.
 		 */
 		unsigned inv_sel_hsic:1;
@@ -388,6 +394,7 @@ typedef union glpmctl_data {
 typedef union grstctl_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		/** Core Soft Reset (CSftRst) (Device and Host)
@@ -426,6 +433,7 @@ typedef union grstctl_data {
 		 * of the core.
 		 */
 		unsigned csftrst:1;
+
 		/** Hclk Soft Reset
 		 *
 		 * The application uses this bit to reset the control logic in
@@ -433,8 +441,9 @@ typedef union grstctl_data {
 		 * reset.
 		 */
 		unsigned hsftrst:1;
-		/** Host Frame Counter Reset (Host Only)<br>
-		 * 
+
+        /** Host Frame Counter Reset (Host Only)<br>
+		 *
 		 * The application can reset the (micro)frame number
 		 * counter inside the core, using this bit. When the
 		 * (micro)frame counter is reset, the subsequent SOF
@@ -442,10 +451,12 @@ typedef union grstctl_data {
 		 * number of 0.
 		 */
 		unsigned hstfrm:1;
+
 		/** In Token Sequence Learning Queue Flush
 		 * (INTknQFlsh) (Device Only)
 		 */
 		unsigned intknqflsh:1;
+
 		/** RxFIFO Flush (RxFFlsh) (Device and Host)
 		 *
 		 * The application can flush the entire Receive FIFO
@@ -461,7 +472,8 @@ typedef union grstctl_data {
 		 * to clear.
 		 */
 		unsigned rxfflsh:1;
-		/** TxFIFO Flush (TxFFlsh) (Device and Host).  
+
+		/** TxFIFO Flush (TxFFlsh) (Device and Host).
 		 *
 		 * This bit is used to selectively flush a single or
 		 * all transmit FIFOs.	The application must first
@@ -478,7 +490,7 @@ typedef union grstctl_data {
 		unsigned txfflsh:1;
 
 		/** TxFIFO Number (TxFNum) (Device and Host).
-		 * 
+		 *
 		 * This is the FIFO number which needs to be flushed,
 		 * using the TxFIFO Flush bit. This field should not
 		 * be changed until the TxFIFO Flush bit is cleared by
@@ -493,11 +505,14 @@ typedef union grstctl_data {
 		 *	   Transmit Periodic FIFOs in the core
 		 */
 		unsigned txfnum:5;
+
 		/** Reserved */
 		unsigned reserved11_29:19;
+
 		/** DMA Request Signal.	 Indicated DMA request is in
 		 * probress.  Used for debug purpose. */
 		unsigned dmareq:1;
+
 		/** AHB Master Idle.  Indicates the AHB Master State
 		 * Machine is in IDLE condition. */
 		unsigned ahbidle:1;
@@ -512,6 +527,7 @@ typedef union grstctl_data {
 typedef union gintmsk_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		unsigned reserved0:1;
@@ -547,6 +563,7 @@ typedef union gintmsk_data {
 		unsigned wkupintr:1;
 	} b;
 } gintmsk_data_t;
+
 /**
  * This union represents the bit fields of the Core Interrupt Register
  * (GINTSTS).  Set/clear the bits using the bit fields then write the
@@ -555,6 +572,7 @@ typedef union gintmsk_data {
 typedef union gintsts_data {
 	/** raw register data */
 	uint32 d32;
+
 #define DWC_SOF_INTR_MASK 0x0008
 	/** register bits */
 	struct {
@@ -594,13 +612,14 @@ typedef union gintsts_data {
 } gintsts_data_t;
 
 /**
- * This union represents the bit fields in the Device Receive Status Read and 
- * Pop Registers (GRXSTSR, GRXSTSP) Read the register into the <i>d32</i> 
+ * This union represents the bit fields in the Device Receive Status Read and
+ * Pop Registers (GRXSTSR, GRXSTSP) Read the register into the <i>d32</i>
  * element then read out the bits using the <i>b</i>it elements.
  */
 typedef union device_grxsts_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		unsigned epnum:4;
@@ -620,13 +639,14 @@ typedef union device_grxsts_data {
 } device_grxsts_data_t;
 
 /**
- * This union represents the bit fields in the Host Receive Status Read and 
- * Pop Registers (GRXSTSR, GRXSTSP) Read the register into the <i>d32</i> 
+ * This union represents the bit fields in the Host Receive Status Read and
+ * Pop Registers (GRXSTSR, GRXSTSP) Read the register into the <i>d32</i>
  * element then read out the bits using the <i>b</i>it elements.
  */
 typedef union host_grxsts_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		unsigned chnum:4;
@@ -651,6 +671,7 @@ typedef union host_grxsts_data {
 typedef union fifosize_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		unsigned startaddr:16;
@@ -667,14 +688,15 @@ typedef union fifosize_data {
 typedef union gnptxsts_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		unsigned nptxfspcavail:16;
 		unsigned nptxqspcavail:8;
-		/** Top of the Non-Periodic Transmit Request Queue 
+		/** Top of the Non-Periodic Transmit Request Queue
 		 *	- bit 24 - Terminate (Last entry for the selected
 		 *	  channel/EP)
-		 *	- bits 26:25 - Token Type 
+		 *	- bits 26:25 - Token Type
 		 *	  - 2'b00 - IN/OUT
 		 *	  - 2'b01 - Zero Length OUT
 		 *	  - 2'b10 - PING/Complete Split
@@ -697,6 +719,7 @@ typedef union gnptxsts_data {
 typedef union dtxfsts_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		unsigned txfspcavail:16;
@@ -712,6 +735,7 @@ typedef union dtxfsts_data {
 typedef union gi2cctl_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		unsigned rwdata:8;
@@ -735,6 +759,7 @@ typedef union gi2cctl_data {
 typedef union hwcfg1_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		unsigned ep_dir0:2;
@@ -764,6 +789,7 @@ typedef union hwcfg1_data {
 typedef union hwcfg2_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		/* GHWCFG2 */
@@ -806,6 +832,7 @@ typedef union hwcfg2_data {
 typedef union hwcfg3_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		/* GHWCFG3 */
@@ -832,6 +859,7 @@ typedef union hwcfg3_data {
 typedef union hwcfg4_data {
 	/** raw register data */
 	uint32 d32;
+
 	/** register bits */
 	struct {
 		unsigned num_dev_perio_in_ep:4;
@@ -865,50 +893,67 @@ typedef union hwcfg4_data {
 typedef struct dwc_otg_dev_global_regs {
 	/** Device Configuration Register. <i>Offset 800h</i> */
 	volatile uint32 dcfg;
+
 	/** Device Control Register. <i>Offset: 804h</i> */
 	volatile uint32 dctl;
+
 	/** Device Status Register (Read Only). <i>Offset: 808h</i> */
 	volatile uint32 dsts;
+
 	/** Reserved. <i>Offset: 80Ch</i> */
 	uint32 unused;
+
 	/** Device IN Endpoint Common Interrupt Mask
 	 * Register. <i>Offset: 810h</i> */
 	volatile uint32 diepmsk;
+
 	/** Device OUT Endpoint Common Interrupt Mask
 	 * Register. <i>Offset: 814h</i> */
 	volatile uint32 doepmsk;
+
 	/** Device All Endpoints Interrupt Register.  <i>Offset: 818h</i> */
 	volatile uint32 daint;
+
 	/** Device All Endpoints Interrupt Mask Register.  <i>Offset:
 	 * 81Ch</i> */
 	volatile uint32 daintmsk;
+
 	/** Device IN Token Queue Read Register-1 (Read Only).
 	 * <i>Offset: 820h</i> */
 	volatile uint32 dtknqr1;
+
 	/** Device IN Token Queue Read Register-2 (Read Only).
 	 * <i>Offset: 824h</i> */
 	volatile uint32 dtknqr2;
+
 	/** Device VBUS	 discharge Register.  <i>Offset: 828h</i> */
 	volatile uint32 dvbusdis;
+
 	/** Device VBUS Pulse Register.	 <i>Offset: 82Ch</i> */
 	volatile uint32 dvbuspulse;
+
 	/** Device IN Token Queue Read Register-3 (Read Only). /
 	 *	Device Thresholding control register (Read/Write)
 	 * <i>Offset: 830h</i> */
 	volatile uint32 dtknqr3_dthrctl;
+
 	/** Device IN Token Queue Read Register-4 (Read Only). /
 	 *	Device IN EPs empty Inr. Mask Register (Read/Write)
 	 * <i>Offset: 834h</i> */
 	volatile uint32 dtknqr4_fifoemptymsk;
+
 	/** Device Each Endpoint Interrupt Register (Read Only). /
 	 * <i>Offset: 838h</i> */
 	volatile uint32 deachint;
+
 	/** Device Each Endpoint Interrupt mask Register (Read/Write). /
 	 * <i>Offset: 83Ch</i> */
 	volatile uint32 deachintmsk;
+
 	/** Device Each In Endpoint Interrupt mask Register (Read/Write). /
 	 * <i>Offset: 840h</i> */
 	volatile uint32 diepeachintmsk[MAX_EPS_CHANNELS];
+
 	/** Device Each Out Endpoint Interrupt mask Register (Read/Write). /
 	 * <i>Offset: 880h</i> */
 	volatile uint32 doepeachintmsk[MAX_EPS_CHANNELS];
@@ -935,81 +980,103 @@ typedef struct dwc_otg_dev_global_regs {
 /**
  * This union represents the bit fields in the DMA Descriptor
  * status quadlet. Read the quadlet into the <i>d32</i> member then
- * set/clear the bits using the <i>b</i>it, <i>b_iso_out</i> and 
+ * set/clear the bits using the <i>b</i>it, <i>b_iso_out</i> and
  * <i>b_iso_in</i> elements.
  */
 typedef union dev_dma_desc_sts {
-		/** raw register data */
+    /** raw register data */
 	uint32 d32;
-		/** quadlet bits */
+
+    /** quadlet bits */
 	struct {
 		/** Received number of bytes */
 		unsigned bytes:16;
 
 		unsigned reserved16_22:7;
+
 		/** Multiple Transfer - only for OUT EPs */
 		unsigned mtrf:1;
+
 		/** Setup Packet received - only for OUT EPs */
 		unsigned sr:1;
+
 		/** Interrupt On Complete */
 		unsigned ioc:1;
+
 		/** Short Packet */
 		unsigned sp:1;
+
 		/** Last */
 		unsigned l:1;
+
 		/** Receive Status */
 		unsigned sts:2;
+
 		/** Buffer Status */
 		unsigned bs:2;
 	} b;
 
 #ifdef DWC_EN_ISOC
-		/** iso out quadlet bits */
+    /** iso out quadlet bits */
 	struct {
 		/** Received number of bytes */
 		unsigned rxbytes:11;
 
 		unsigned reserved11:1;
+
 		/** Frame Number */
 		unsigned framenum:11;
+
 		/** Received ISO Data PID */
 		unsigned pid:2;
+
 		/** Interrupt On Complete */
 		unsigned ioc:1;
+
 		/** Short Packet */
 		unsigned sp:1;
+
 		/** Last */
 		unsigned l:1;
+
 		/** Receive Status */
 		unsigned rxsts:2;
+
 		/** Buffer Status */
 		unsigned bs:2;
 	} b_iso_out;
 
-		/** iso in quadlet bits */
+    /** iso in quadlet bits */
 	struct {
 		/** Transmited number of bytes */
 		unsigned txbytes:12;
+
 		/** Frame Number */
 		unsigned framenum:11;
+
 		/** Transmited ISO Data PID */
 		unsigned pid:2;
+
 		/** Interrupt On Complete */
 		unsigned ioc:1;
+
 		/** Short Packet */
 		unsigned sp:1;
+
 		/** Last */
 		unsigned l:1;
+
 		/** Transmit Status */
 		unsigned txsts:2;
+
 		/** Buffer Status */
 		unsigned bs:2;
 	} b_iso_in;
 #endif				/* DWC_EN_ISOC */
 } dev_dma_desc_sts_t;
 
-/** 
- * DMA Descriptor structure 
+/**
+ * DMA Descriptor structure
  *
  * DMA Descriptor structure contains two quadlets:
  * Status quadlet and Data buffer pointer.
@@ -1017,6 +1084,7 @@ typedef union dev_dma_desc_sts {
 typedef struct dwc_otg_dev_dma_desc {
 	/** DMA Descriptor status quadlet */
 	dev_dma_desc_sts_t status;
+
 	/** DMA Descriptor data buffer pointer */
 	uint32 buf;
 } dwc_otg_dev_dma_desc_t;
@@ -1028,22 +1096,29 @@ typedef struct dwc_otg_dev_dma_desc {
  * The Host Global Registers structure defines the size and relative
  * field offsets for the Host Mode Global Registers.  Host Global
  * Registers offsets 400h-7FFh.
-*/
+ */
 typedef struct dwc_otg_host_global_regs {
 	/** Host Configuration Register.   <i>Offset: 400h</i> */
 	volatile uint32 hcfg;
+
 	/** Host Frame Interval Register.	<i>Offset: 404h</i> */
 	volatile uint32 hfir;
+
 	/** Host Frame Number / Frame Remaining Register. <i>Offset: 408h</i> */
 	volatile uint32 hfnum;
+
 	/** Reserved.	<i>Offset: 40Ch</i> */
 	uint32 reserved40C;
+
 	/** Host Periodic Transmit FIFO/ Queue Status Register. <i>Offset: 410h</i> */
 	volatile uint32 hptxsts;
+
 	/** Host All Channels Interrupt Register. <i>Offset: 414h</i> */
 	volatile uint32 haint;
+
 	/** Host All Channels Interrupt Mask Register. <i>Offset: 418h</i> */
 	volatile uint32 haintmsk;
+
 	/** Host Frame List Base Address Register . <i>Offset: 41Ch</i> */
 	volatile uint32 hflbaddr;
 } dwc_otg_host_global_regs_t;
@@ -1054,14 +1129,12 @@ typedef struct dwc_otg_host_global_regs {
  * Read the register into the <i>d32</i> member then set/clear the bits using
  * the <i>b</i>it elements. Write the <i>d32</i> member to the hcfg register.
  */
-typedef union hcfg_data
-{
+typedef union hcfg_data {
 	/** raw register data */
 	uint32 d32;
 
 	/** register bits */
-	struct 
-	{
+	struct {
 		/** FS/LS Phy Clock Select */
 		unsigned fslspclksel:2;
 #define DWC_HCFG_30_60_MHZ 0
@@ -1071,12 +1144,16 @@ typedef union hcfg_data
 		/** FS/LS Only Support */
 		unsigned fslssupp:1;
 		unsigned reserved3_22 : 20;
+
 		/** Enable Scatter/gather DMA in Host mode */
 		unsigned descdma : 1;
+
 		/** Frame List Entries */
 		unsigned frlisten: 2;
+
 		/** Enable Periodic Scheduling */
 		unsigned perschedena: 1;
+
 		/** Periodic Scheduling Enabled Status */
 		unsigned perschedstat: 1;
 	} b;
@@ -1084,7 +1161,7 @@ typedef union hcfg_data
 
 /**
  * This union represents the bit fields in the Host Frame Remaing/Number
- * Register.  
+ * Register.
  */
 typedef union hfir_data {
 	/** raw register data */
@@ -1099,7 +1176,7 @@ typedef union hfir_data {
 
 /**
  * This union represents the bit fields in the Host Frame Remaing/Number
- * Register.  
+ * Register.
  */
 typedef union hfnum_data {
 	/** raw register data */
@@ -1170,8 +1247,8 @@ typedef union hprt0_data {
 } hprt0_data_t;
 
 /**
- * This union represents the bit fields in the Host All Interrupt 
- * Register.  
+ * This union represents the bit fields in the Host All Interrupt
+ * Register.
  */
 typedef union haint_data {
 	/** raw register data */
@@ -1204,8 +1281,8 @@ typedef union haint_data {
 } haint_data_t;
 
 /**
- * This union represents the bit fields in the Host All Interrupt 
- * Register.  
+ * This union represents the bit fields in the Host All Interrupt
+ * Register.
  */
 typedef union haintmsk_data {
 	/** raw register data */
@@ -1237,24 +1314,30 @@ typedef union haintmsk_data {
 	} b2;
 } haintmsk_data_t;
 
-/** 
+/**
  * Host Channel Specific Registers. <i>500h-5FCh</i>
  */
-typedef struct dwc_otg_hc_regs 
-{
+typedef struct dwc_otg_hc_regs{
 	/** Host Channel 0 Characteristic Register. <i>Offset: 500h + (chan_num * 20h) + 00h</i> */
 	volatile uint32 hcchar;
+
 	/** Host Channel 0 Split Control Register. <i>Offset: 500h + (chan_num * 20h) + 04h</i> */
 	volatile uint32 hcsplt;
+
 	/** Host Channel 0 Interrupt Register. <i>Offset: 500h + (chan_num * 20h) + 08h</i> */
 	volatile uint32 hcint;
+
 	/** Host Channel 0 Interrupt Mask Register. <i>Offset: 500h + (chan_num * 20h) + 0Ch</i> */
 	volatile uint32 hcintmsk;
+
 	/** Host Channel 0 Transfer Size Register. <i>Offset: 500h + (chan_num * 20h) + 10h</i> */
 	volatile uint32 hctsiz;
+
 	/** Host Channel 0 DMA Address Register. <i>Offset: 500h + (chan_num * 20h) + 14h</i> */
 	volatile uint32 hcdma;
+
 	volatile uint32 reserved;
+
 	/** Host Channel 0 DMA Buffer Address Register. <i>Offset: 500h + (chan_num * 20h) + 1Ch</i> */
 	volatile uint32 hcdmab;
 } dwc_otg_hc_regs_t;
@@ -1339,44 +1422,56 @@ typedef union hcsplt_data {
 } hcsplt_data_t;
 
 /**
- * This union represents the bit fields in the Host All Interrupt 
- * Register.  
+ * This union represents the bit fields in the Host All Interrupt
+ * Register.
  */
-typedef union hcint_data
-{
+typedef union hcint_data {
 	/** raw register data */
 	uint32 d32;
 	/** register bits */
-	struct 
-	{
+	struct {
 		/** Transfer Complete */
 		unsigned xfercomp:1;
+
 		/** Channel Halted */
 		unsigned chhltd:1;
+
 		/** AHB Error */
 		unsigned ahberr:1;
+
 		/** STALL Response Received */
 		unsigned stall:1;
+
 		/** NAK Response Received */
 		unsigned nak:1;
+
 		/** ACK Response Received */
 		unsigned ack:1;
+
 		/** NYET Response Received */
 		unsigned nyet:1;
+
 		/** Transaction Err */
 		unsigned xacterr:1;
+
 		/** Babble Error */
 		unsigned bblerr:1;
+
 		/** Frame Overrun */
 		unsigned frmovrun:1;
+
 		/** Data Toggle Error */
 		unsigned datatglerr:1;
+
 		/** Buffer Not Available (only for DDMA mode) */
 		unsigned bna : 1;
+
 		/** Exessive transaction error (only for DDMA mode) */
 		unsigned xcs_xact : 1;
+
 		/** Frame List Rollover interrupt */
 		unsigned frm_list_roll : 1;
+
 		/** Reserved */
 		unsigned reserved14_31 : 18;
 	} b;
@@ -1388,14 +1483,12 @@ typedef union hcint_data
  * bits using the <i>b</i>it elements. Write the <i>d32</i> member to the
  * hcintmsk register.
  */
-typedef union hcintmsk_data
-{
+typedef union hcintmsk_data {
 	/** raw register data */
 	uint32 d32;
 
 	/** register bits */
-	struct 
-	{
+	struct {
 		unsigned xfercompl : 1;
 		unsigned chhltd : 1;
 		unsigned ahberr : 1;
@@ -1421,14 +1514,12 @@ typedef union hcintmsk_data
  * hcchar register.
  */
 
-typedef union hctsiz_data
-{
+typedef union hctsiz_data {
 	/** raw register data */
 	uint32 d32;
 
 	/** register bits */
-	struct 
-	{
+	struct {
 		/** Total transfer size in bytes */
 		unsigned xfersize:19;
 
@@ -1452,16 +1543,15 @@ typedef union hctsiz_data
 		/** Do PING protocol when 1 */
 		unsigned dopng:1;
 	} b;
-	
+
 	/** register bits */
-	struct 
-	{
+	struct {
 		/** Scheduling information */
 		unsigned schinfo : 8;
-		
-		/** Number of transfer descriptors. 
+
+		/** Number of transfer descriptors.
 		 * Max value:
-		 * 64 in general, 
+		 * 64 in general,
 		 * 256 only for HS isochronous endpoint.
 		 */
 		unsigned ntd : 8;
@@ -1485,19 +1575,19 @@ typedef union hctsiz_data
 
 
 /**
- * This union represents the bit fields in the Host DMA Address  
+ * This union represents the bit fields in the Host DMA Address
  * Register used in Descriptor DMA mode.
  */
-typedef union hcdma_data
-{
+typedef union hcdma_data {
 	/** raw register data */
 	uint32 d32;
 	/** register bits */
-	struct 
-	{
+	struct {
 		unsigned reserved0_2 : 3;
+
 		/** Current Transfer Descriptor. Not used for ISOC */
 		unsigned ctd : 8;
+
 		/** Start Address of Descriptor List */
 		unsigned dma_addr : 21;
 	} b;
@@ -1508,8 +1598,7 @@ typedef union hcdma_data
  * status quadlet for host mode. Read the quadlet into the <i>d32</i> member then
  * set/clear the bits using the <i>b</i>it elements.
  */
-typedef union host_dma_desc_sts
-{
+typedef union host_dma_desc_sts {
 	/** raw register data */
 	uint32 d32;
 	/** quadlet bits */
@@ -1520,25 +1609,33 @@ typedef union host_dma_desc_sts
 		unsigned n_bytes : 17;
 		/** QTD offset to jump when Short Packet received - only for IN EPs */
 		unsigned qtd_offset : 6;
-		/** 
-		 * Set to request the core to jump to alternate QTD if 
-		 * Short Packet received - only for IN EPs 
+
+		/**
+		 * Set to request the core to jump to alternate QTD if
+		 * Short Packet received - only for IN EPs
 		 */
 		unsigned a_qtd : 1;
-		 /** 
-		  * Setup Packet bit. When set indicates that buffer contains
-		  * setup packet. 
-		  */
+
+        /**
+         * Setup Packet bit. When set indicates that buffer contains
+         * setup packet.
+         */
 		unsigned sup : 1;
+
 		/** Interrupt On Complete */
 		unsigned ioc : 1;
+
 		/** End of List */
 		unsigned eol : 1;
+
 		unsigned reserved27 : 1;
+
 		/** Rx/Tx Status */
 		unsigned sts : 2;
-	#define DMA_DESC_STS_PKTERR	1
+
+#define DMA_DESC_STS_PKTERR	1
 		unsigned reserved30 : 1;
+
 		/** Active Bit */
 		unsigned a : 1;
 	} b;
@@ -1547,12 +1644,17 @@ typedef union host_dma_desc_sts
 		/** Number of bytes */
 		unsigned n_bytes : 12;
 		unsigned reserved12_24 : 13;
+
 		/** Interrupt On Complete */
 		unsigned ioc : 1;
+
 		unsigned reserved26_27 : 2;
+
 		/** Rx/Tx Status */
 		unsigned sts : 2;
+
 		unsigned reserved30 : 1;
+
 		/** Active Bit */
 		unsigned a : 1;
 	} b_isoc;
@@ -1562,14 +1664,13 @@ typedef union host_dma_desc_sts
 #define MAX_DMA_DESC_NUM_GENERIC	64
 #define MAX_DMA_DESC_NUM_HS_ISOC	256
 #define MAX_FRLIST_EN_NUM		64
-/** 
- * Host-mode DMA Descriptor structure 
+/**
+ * Host-mode DMA Descriptor structure
  *
  * DMA Descriptor structure contains two quadlets:
  * Status quadlet and Data buffer pointer.
  */
-typedef struct dwc_otg_host_dma_desc
-{
+typedef struct dwc_otg_host_dma_desc {
 	/** DMA Descriptor status quadlet */
 	host_dma_desc_sts_t	status;
 	/** DMA Descriptor data buffer pointer */
@@ -1591,12 +1692,12 @@ typedef struct dwc_otg_host_if {
 	/** Host Port 0 Control and Status Register */
 	volatile uint32 *hprt0;
 #define DWC_OTG_HOST_PORT_REGS_OFFSET 0x440
-
+    
 	/** Host Channel Specific Registers at offsets 500h-5FCh. */
 	dwc_otg_hc_regs_t *hc_regs[MAX_EPS_CHANNELS];
 #define DWC_OTG_HOST_CHAN_REGS_OFFSET 0x500
 #define DWC_OTG_CHAN_REGS_OFFSET 0x20
-
+    
 	/* Host configuration information */
 	/** Number of Host Channels (range: 1-16) */
 	uint8 num_host_channels;
@@ -1604,37 +1705,28 @@ typedef struct dwc_otg_host_if {
 	uint8 perio_eps_supported;
 	/** Periodic Tx FIFO Size (Only 1 host periodic Tx FIFO) */
 	uint16 perio_tx_fifo_size;
-
+    
 } dwc_otg_host_if_t;
 
 /**
  * This union represents the bit fields in the Power and Clock Gating Control
  * Register. Read the register into the <i>d32</i> member then set/clear the
- * bits using the <i>b</i>it elements. 
+ * bits using the <i>b</i>it elements.
  */
 typedef union pcgcctl_data {
 	/** raw register data */
 	uint32 d32;
-
+    
 	/** register bits */
 	struct {
-		/** Stop Pclk */
-		unsigned stoppclk:1;
-		/** Gate Hclk */
-		unsigned gatehclk:1;
-		/** Power Clamp */
-		unsigned pwrclmp:1;
-		/** Reset Power Down Modules */
-		unsigned rstpdwnmodule:1;
-		/** PHY Suspended */
-		unsigned physuspended:1;
-		/** Enable Sleep Clock Gating (Enbl_L1Gating) */
-		unsigned enbl_sleep_gating:1;
-		/** PHY In Sleep (PhySleep) */
-		unsigned phy_in_sleep:1;
-		/** Deep Sleep*/
-		unsigned deep_sleep:1;
-
+		unsigned stoppclk:1;        /* Stop Pclk */
+        unsigned gatehclk:1;        /* Gate Hclk */
+		unsigned pwrclmp:1;         /* Power Clamp */
+		unsigned rstpdwnmodule:1;   /* Reset Power Down Modules */
+		unsigned physuspended:1;    /* PHY Suspended */
+		unsigned enbl_sleep_gating:1; /* Enable Sleep Clock Gating (Enbl_L1Gating) */
+		unsigned phy_in_sleep:1;    /* PHY In Sleep (PhySleep) */
+		unsigned deep_sleep:1;      /* Deep Sleep*/
 		unsigned reserved31_8:24;
 	} b;
 } pcgcctl_data_t;

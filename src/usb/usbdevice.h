@@ -1,32 +1,3 @@
-/*
- * (C) Copyright 2003
- * Gerry Hamel, geh@ti.com, Texas Instruments
- *
- * Based on linux/drivers/usbd/usbd.h
- *
- * Copyright (c) 2000, 2001, 2002 Lineo
- * Copyright (c) 2001 Hewlett Packard
- *
- * By:
- *	Stuart Lynne <sl@lineo.com>,
- *	Tom Rushworth <tbr@lineo.com>,
- *	Bruce Balden <balden@lineo.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
- *
- */
 
 #ifndef __USBDCORE_H__
 #define __USBDCORE_H__
@@ -98,33 +69,61 @@
 
 #ifndef mmio_insw
 #define mmio_insw(r,b,l)	({	int __i ;  \
-					uint16 *__b2;  \
-					__b2 = (uint16 *) b;  \
-					for (__i = 0; __i < l; __i++) {	 \
-					  *(__b2 + __i) = inw(r);  \
-					};  \
-				})
+uint16 *__b2;  \
+__b2 = (uint16 *) b;  \
+for (__i = 0; __i < l; __i++) {	 \
+*(__b2 + __i) = inw(r);  \
+};  \
+})
 #endif
 
 #ifndef mmio_outsw
 #define mmio_outsw(r,b,l)	({	int __i; \
-					uint16 *__b2; \
-					__b2 = (uint16 *) b; \
-					for (__i = 0; __i < l; __i++) { \
-					    outw( *(__b2 + __i), r); \
-					} \
-				})
+uint16 *__b2; \
+__b2 = (uint16 *) b; \
+for (__i = 0; __i < l; __i++) { \
+outw( *(__b2 + __i), r); \
+} \
+})
 #endif
 
 #ifndef mmio_insb
 #define mmio_insb(r,b,l)	({	int __i ;  \
-					uint8 *__b2;  \
-					__b2 = (uint8 *) b;  \
-					for (__i = 0; __i < l; __i++) {	 \
-					  *(__b2 + __i) = inb(r);  \
-					};  \
-				})
+uint8 *__b2;  \
+__b2 = (uint8 *) b;  \
+for (__i = 0; __i < l; __i++) {	 \
+*(__b2 + __i) = inb(r);  \
+};  \
+})
 #endif
+
+/* Device information */
+struct stdio_dev {
+    int     flags;                  /* Device flags: input/output/system    */
+    int     ext;                    /* Supported extensions                 */
+    char    name[16];               /* Device name                          */
+
+    /* GENERAL functions */
+
+    int (*start) (void);            /* To start the device                  */
+    int (*stop) (void);             /* To stop the device                   */
+
+    /* OUTPUT functions */
+
+    void (*putc) (const char c);    /* To put a char                        */
+    void (*puts) (const char *s);   /* To put a string (accelerator)        */
+
+    /* INPUT functions */
+
+    int (*tstc) (void);             /* To test if a char is ready...        */
+    int (*getc) (void);             /* To get that char                     */
+
+    /* Other functions */
+
+    void *priv;                     /* Private extensions                   */
+};
+
+
 
 /*
  * Structure member address manipulation macros.
@@ -347,7 +346,7 @@ struct usb_bus_instance;
 #define USB_DESCRIPTOR_TYPE_REPORT			0x22
 
 #define USBD_DEVICE_DESCRIPTORS(x) (((unsigned int)x <= USB_DESCRIPTOR_TYPE_INTERFACE_POWER) ? \
-		usbd_device_descriptors[x] : "UNKNOWN")
+usbd_device_descriptors[x] : "UNKNOWN")
 
 /*
  * standard feature selectors
@@ -669,7 +668,7 @@ struct usb_endpoint_descriptor *usbd_device_endpoint_descriptor (struct usb_devi
 int				usbd_device_endpoint_transfersize (struct usb_device_instance *, int, int, int, int, int);
 struct usb_string_descriptor *usbd_get_string (uint8);
 struct usb_device_descriptor *usbd_device_device_descriptor(struct
-		usb_device_instance *, int);
+                                                            usb_device_instance *, int);
 
 #if defined(CONFIG_USBD_HS)
 /*
@@ -743,39 +742,39 @@ static inline void print_usb_device_request(struct usb_device_request *r)
 	serial_cprintf("\twValue        0x%4.4x\n", r->wValue);
 	if (r->bRequest == USB_REQ_GET_DESCRIPTOR) {
 		switch (r->wValue >> 8) {
-		case USB_DESCRIPTOR_TYPE_DEVICE:
-			serial_cprintf("\tDEVICE\n");
-			break;
-		case USB_DESCRIPTOR_TYPE_CONFIGURATION:
-			serial_cprintf("\tCONFIGURATION\n");
-			break;
-		case USB_DESCRIPTOR_TYPE_STRING:
-			serial_cprintf("\tSTRING\n");
-			break;
-		case USB_DESCRIPTOR_TYPE_INTERFACE:
-			serial_cprintf("\tINTERFACE\n");
-			break;
-		case USB_DESCRIPTOR_TYPE_ENDPOINT:
-			serial_cprintf("\tENDPOINT\n");
-			break;
-		case USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER:
-			serial_cprintf("\tDEVICE_QUALIFIER\n");
-			break;
-		case USB_DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION:
-			serial_cprintf("\tOTHER_SPEED_CONFIGURATION\n");
-			break;
-		case USB_DESCRIPTOR_TYPE_INTERFACE_POWER:
-			serial_cprintf("\tINTERFACE_POWER\n");
-			break;
-		case USB_DESCRIPTOR_TYPE_HID:
-			serial_cprintf("\tHID\n");
-			break;
-		case USB_DESCRIPTOR_TYPE_REPORT:
-			serial_cprintf("\tREPORT\n");
-			break;
-		default:
-			serial_cprintf("\tUNKNOWN TYPE\n");
-			break;
+            case USB_DESCRIPTOR_TYPE_DEVICE:
+                serial_cprintf("\tDEVICE\n");
+                break;
+            case USB_DESCRIPTOR_TYPE_CONFIGURATION:
+                serial_cprintf("\tCONFIGURATION\n");
+                break;
+            case USB_DESCRIPTOR_TYPE_STRING:
+                serial_cprintf("\tSTRING\n");
+                break;
+            case USB_DESCRIPTOR_TYPE_INTERFACE:
+                serial_cprintf("\tINTERFACE\n");
+                break;
+            case USB_DESCRIPTOR_TYPE_ENDPOINT:
+                serial_cprintf("\tENDPOINT\n");
+                break;
+            case USB_DESCRIPTOR_TYPE_DEVICE_QUALIFIER:
+                serial_cprintf("\tDEVICE_QUALIFIER\n");
+                break;
+            case USB_DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION:
+                serial_cprintf("\tOTHER_SPEED_CONFIGURATION\n");
+                break;
+            case USB_DESCRIPTOR_TYPE_INTERFACE_POWER:
+                serial_cprintf("\tINTERFACE_POWER\n");
+                break;
+            case USB_DESCRIPTOR_TYPE_HID:
+                serial_cprintf("\tHID\n");
+                break;
+            case USB_DESCRIPTOR_TYPE_REPORT:
+                serial_cprintf("\tREPORT\n");
+                break;
+            default:
+                serial_cprintf("\tUNKNOWN TYPE\n");
+                break;
 		}
 	}
 	serial_cprintf("\twIndex        0x%4.4x\n", r->wIndex);

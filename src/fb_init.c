@@ -8,7 +8,7 @@
 
 // to access mailbox, framebuffer uses mailbox 0 channel 1. for more 
 // information: https://github.com/raspberrypi/firmware/wiki/Mailboxes
-volatile uint32* mbox_base = (uint32*)0x2000B880;
+static volatile uint32* mbox_base = (uint32*)0x2000B880;
 #define READ        0
 #define WRITE       8
 #define STATUS      6

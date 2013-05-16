@@ -1,30 +1,8 @@
-/*
- * (C) Copyright 2001
- * Denis Peter, MPL AG Switzerland
- *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
- *
- * Note: Part of this code has been derived from linux
- *
- */
+
 #ifndef _USB_H_
 #define _USB_H_
+
+#define __LITTLE_ENDIAN
 
 #include "usb_defs.h"
 #include "usbdescriptors.h"
@@ -121,7 +99,7 @@ struct usb_device {
 	int configno;			/* selected config number */
 	/* Device Descriptor */
 	struct usb_device_descriptor descriptor;
-		//__attribute__((aligned(ARCH_DMA_MINALIGN)));
+    //__attribute__((aligned(ARCH_DMA_MINALIGN)));
 	struct usb_config config; /* config descriptor */
 
 	int have_langid;		/* whether string_langid is valid yet */
@@ -151,22 +129,22 @@ struct usb_device {
 #define CONFIG_USB_DWC_OTG
 
 #if defined(CONFIG_USB_UHCI) || defined(CONFIG_USB_OHCI) || \
-	defined(CONFIG_USB_EHCI) || defined(CONFIG_USB_OHCI_NEW) || \
-	defined(CONFIG_USB_SL811HS) || defined(CONFIG_USB_ISP116X_HCD) || \
-	defined(CONFIG_USB_R8A66597_HCD) || defined(CONFIG_USB_DAVINCI) || \
-	defined(CONFIG_USB_OMAP3) || defined(CONFIG_USB_DA8XX) || \
-	defined(CONFIG_USB_BLACKFIN) || defined(CONFIG_USB_AM35X) || \
-	defined(CONFIG_USB_DWC_OTG)
+defined(CONFIG_USB_EHCI) || defined(CONFIG_USB_OHCI_NEW) || \
+defined(CONFIG_USB_SL811HS) || defined(CONFIG_USB_ISP116X_HCD) || \
+defined(CONFIG_USB_R8A66597_HCD) || defined(CONFIG_USB_DAVINCI) || \
+defined(CONFIG_USB_OMAP3) || defined(CONFIG_USB_DA8XX) || \
+defined(CONFIG_USB_BLACKFIN) || defined(CONFIG_USB_AM35X) || \
+defined(CONFIG_USB_DWC_OTG)
 
 int usb_lowlevel_init(int index, void **controller);
 int usb_lowlevel_stop(int index);
 
 int submit_bulk_msg(struct usb_device *dev, unsigned long pipe,
-			void *buffer, int transfer_len);
+                    void *buffer, int transfer_len);
 int submit_control_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
-			int transfer_len, struct devrequest *setup);
+                       int transfer_len, struct devrequest *setup);
 int submit_int_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
-			int transfer_len, int interval);
+                   int transfer_len, int interval);
 
 /* Defines */
 #define USB_UHCI_VEND_ID	0x8086
@@ -216,48 +194,52 @@ int usb_stop(void); /* stop the USB Controller */
 
 int usb_set_protocol(struct usb_device *dev, int ifnum, int protocol);
 int usb_set_idle(struct usb_device *dev, int ifnum, int duration,
-			int report_id);
+                 int report_id);
 struct usb_device *usb_get_dev_index(int index);
 int usb_control_msg(struct usb_device *dev, unsigned int pipe,
-			unsigned char request, unsigned char requesttype,
-			unsigned short value, unsigned short index,
-			void *data, unsigned short size, int timeout);
+                    unsigned char request, unsigned char requesttype,
+                    unsigned short value, unsigned short index,
+                    void *data, unsigned short size, int timeout);
 int usb_bulk_msg(struct usb_device *dev, unsigned int pipe,
-			void *data, int len, int *actual_length, int timeout);
+                 void *data, int len, int *actual_length, int timeout);
 int usb_submit_int_msg(struct usb_device *dev, unsigned long pipe,
-			void *buffer, int transfer_len, int interval);
+                       void *buffer, int transfer_len, int interval);
 int usb_disable_asynch(int disable);
 int usb_maxpacket(struct usb_device *dev, unsigned long pipe);
 int usb_get_configuration_no(struct usb_device *dev, unsigned char *buffer,
-				int cfgno);
+                             int cfgno);
 int usb_get_report(struct usb_device *dev, int ifnum, unsigned char type,
-			unsigned char id, void *buf, int size);
+                   unsigned char id, void *buf, int size);
 int usb_get_class_descriptor(struct usb_device *dev, int ifnum,
-			unsigned char type, unsigned char id, void *buf,
-			int size);
+                             unsigned char type, unsigned char id, void *buf,
+                             int size);
 int usb_clear_halt(struct usb_device *dev, int pipe);
-int usb_string(struct usb_device *dev, int index, char *buf, size_t size);
+int usb_string(struct usb_device *dev, int index, char *buf, int size);
 int usb_set_interface(struct usb_device *dev, int interface, int alternate);
 
 /* big endian -> little endian conversion */
 /* some CPUs are already little endian e.g. the ARM920T */
 #define __swap_16(x) \
-	({ unsigned short x_ = (unsigned short)x; \
-	 (unsigned short)( \
-		((x_ & 0x00FFU) << 8) | ((x_ & 0xFF00U) >> 8)); \
-	})
+({ unsigned short x_ = (unsigned short)x; \
+(unsigned short)( \
+((x_ & 0x00FFU) << 8) | ((x_ & 0xFF00U) >> 8)); \
+})
 #define __swap_32(x) \
-	({ unsigned long x_ = (unsigned long)x; \
-	 (unsigned long)( \
-		((x_ & 0x000000FFUL) << 24) | \
-		((x_ & 0x0000FF00UL) <<	 8) | \
-		((x_ & 0x00FF0000UL) >>	 8) | \
-		((x_ & 0xFF000000UL) >> 24)); \
-	})
+({ unsigned long x_ = (unsigned long)x; \
+(unsigned long)( \
+((x_ & 0x000000FFUL) << 24) | \
+((x_ & 0x0000FF00UL) <<	 8) | \
+((x_ & 0x00FF0000UL) >>	 8) | \
+((x_ & 0xFF000000UL) >> 24)); \
+})
 
 #ifdef __LITTLE_ENDIAN
 # define swap_16(x) (x)
 # define swap_32(x) (x)
+#define  cpu_to_le16(x) ((uint16)(x))
+#define  le16_to_cpu(x) (x)
+#define  le16_to_cpus(x) ((int16)(x))
+
 #else
 # define swap_16(x) __swap_16(x)
 # define swap_32(x) __swap_32(x)
@@ -299,42 +281,42 @@ int usb_set_interface(struct usb_device *dev, int interface, int alternate);
  */
 /* Create various pipes... */
 #define create_pipe(dev,endpoint) \
-		(((dev)->devnum << 8) | ((endpoint) << 15) | \
-		((dev)->speed << 26) | (dev)->maxpacketsize)
+(((dev)->devnum << 8) | ((endpoint) << 15) | \
+((dev)->speed << 26) | (dev)->maxpacketsize)
 #define default_pipe(dev) ((dev)->speed << 26)
 
 #define usb_sndctrlpipe(dev, endpoint)	((PIPE_CONTROL << 30) | \
-					 create_pipe(dev, endpoint))
+create_pipe(dev, endpoint))
 #define usb_rcvctrlpipe(dev, endpoint)	((PIPE_CONTROL << 30) | \
-					 create_pipe(dev, endpoint) | \
-					 USB_DIR_IN)
+create_pipe(dev, endpoint) | \
+USB_DIR_IN)
 #define usb_sndisocpipe(dev, endpoint)	((PIPE_ISOCHRONOUS << 30) | \
-					 create_pipe(dev, endpoint))
+create_pipe(dev, endpoint))
 #define usb_rcvisocpipe(dev, endpoint)	((PIPE_ISOCHRONOUS << 30) | \
-					 create_pipe(dev, endpoint) | \
-					 USB_DIR_IN)
+create_pipe(dev, endpoint) | \
+USB_DIR_IN)
 #define usb_sndbulkpipe(dev, endpoint)	((PIPE_BULK << 30) | \
-					 create_pipe(dev, endpoint))
+create_pipe(dev, endpoint))
 #define usb_rcvbulkpipe(dev, endpoint)	((PIPE_BULK << 30) | \
-					 create_pipe(dev, endpoint) | \
-					 USB_DIR_IN)
+create_pipe(dev, endpoint) | \
+USB_DIR_IN)
 #define usb_sndintpipe(dev, endpoint)	((PIPE_INTERRUPT << 30) | \
-					 create_pipe(dev, endpoint))
+create_pipe(dev, endpoint))
 #define usb_rcvintpipe(dev, endpoint)	((PIPE_INTERRUPT << 30) | \
-					 create_pipe(dev, endpoint) | \
-					 USB_DIR_IN)
+create_pipe(dev, endpoint) | \
+USB_DIR_IN)
 #define usb_snddefctrl(dev)		((PIPE_CONTROL << 30) | \
-					 default_pipe(dev))
+default_pipe(dev))
 #define usb_rcvdefctrl(dev)		((PIPE_CONTROL << 30) | \
-					 default_pipe(dev) | \
-					 USB_DIR_IN)
+default_pipe(dev) | \
+USB_DIR_IN)
 
 /* The D0/D1 toggle bits */
 #define usb_gettoggle(dev, ep, out) (((dev)->toggle[out] >> ep) & 1)
 #define usb_dotoggle(dev, ep, out)  ((dev)->toggle[out] ^= (1 << ep))
 #define usb_settoggle(dev, ep, out, bit) ((dev)->toggle[out] = \
-						((dev)->toggle[out] & \
-						 ~(1 << ep)) | ((bit) << ep))
+((dev)->toggle[out] & \
+~(1 << ep)) | ((bit) << ep))
 
 /* Endpoint halt control/status */
 #define usb_endpoint_out(ep_dir)	(((ep_dir >> 7) & 1) ^ 1)
@@ -343,7 +325,7 @@ int usb_set_interface(struct usb_device *dev, int interface, int alternate);
 #define usb_endpoint_halted(dev, ep, out) ((dev)->halted[out] & (1 << (ep)))
 
 #define usb_packetid(pipe)	(((pipe) & USB_DIR_IN) ? USB_PID_IN : \
-				 USB_PID_OUT)
+USB_PID_OUT)
 
 #define usb_pipeout(pipe)	((((pipe) >> 7) & 1) ^ 1)
 #define usb_pipein(pipe)	(((pipe) >> 7) & 1)
@@ -363,30 +345,6 @@ int usb_set_interface(struct usb_device *dev, int interface, int alternate);
 /*************************************************************************
  * Hub Stuff
  */
-struct usb_port_status {
-	unsigned short wPortStatus;
-	unsigned short wPortChange;
-} __attribute__ ((packed));
-
-struct usb_hub_status {
-	unsigned short wHubStatus;
-	unsigned short wHubChange;
-} __attribute__ ((packed));
-
-
-/* Hub descriptor */
-struct usb_hub_descriptor {
-	unsigned char  bLength;
-	unsigned char  bDescriptorType;
-	unsigned char  bNbrPorts;
-	unsigned short wHubCharacteristics;
-	unsigned char  bPwrOn2PwrGood;
-	unsigned char  bHubContrCurrent;
-	unsigned char  DeviceRemovable[(USB_MAXCHILDREN+1+7)/8];
-	unsigned char  PortPowerCtrlMask[(USB_MAXCHILDREN+1+7)/8];
-	/* DeviceRemovable and PortPwrCtrlMask want to be variable-length
-	   bitmaps that hold max 255 entries. (bit0 is ignored) */
-} __attribute__ ((packed));
 
 
 struct usb_hub_device {
@@ -397,7 +355,7 @@ struct usb_hub_device {
 int usb_hub_probe(struct usb_device *dev, int ifnum);
 void usb_hub_reset(void);
 int hub_port_reset(struct usb_device *dev, int port,
-			  unsigned short *portstat);
+                   unsigned short *portstat);
 
 struct usb_device *usb_alloc_new_device(void *controller);
 

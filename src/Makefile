@@ -4,7 +4,7 @@ CFLAGS += -Werror
 include makefile.inc
 
 # link the libgcc.a for __aeabi_idiv. ARM has no native support for div
-LIBS=-lgcc
+LIBS=-lgcc -lusb
 
 OBJS = \
         arm.o\
@@ -35,7 +35,7 @@ OBJS = \
         trap.o\
         vm.o
 	
-kernel.elf: $(OBJS) entry.o kernel.ld initcode fs.img
+kernel.elf: $(OBJS) entry.o kernel.ld libusb.a initcode fs.img
 	$(LD) $(LDFLAGS) -T kernel.ld -o kernel.elf entry.o $(OBJS) $(LIBS) -b binary initcode fs.img
 	$(OBJDUMP) -S kernel.elf > kernel.asm
 	$(OBJDUMP) -t kernel.elf | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > kernel.sym
@@ -49,12 +49,17 @@ initcode: initcode.S
 	$(OBJCOPY) -S -O binary initcode.out initcode
 	$(OBJDUMP) -S initcode.o > initcode.asm
 
+libusb.a: 
+	make -C usb_xv6
+	cp usb_xv6/libusb.a .
+
 fs.img: 
 	make -C usr
-	make -C usb
 	cp usr/fs.img fs.img
 
 clean: 
 	rm -f *.o *.d *.asm *.sym vectors.S bootblock entryother \
-	initcode initcode.out kernel kernel.img xv6.img fs.img kernel.elf memfs mkfs
+	initcode initcode.out libusb.a kernel kernel.img xv6.img fs.img kernel.elf memfs mkfs
 	make -C usr clean
+	make -C usb clean
+	make -C usb_xv6 clean

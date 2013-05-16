@@ -1,39 +1,3 @@
-/*
- *
- * Most of this source has been derived from the Linux USB
- * project:
- * (C) Copyright Linus Torvalds 1999
- * (C) Copyright Johannes Erdfelt 1999-2001
- * (C) Copyright Andreas Gal 1999
- * (C) Copyright Gregory P. Smith 1999
- * (C) Copyright Deti Fliegl 1999 (new USB architecture)
- * (C) Copyright Randy Dunlap 2000
- * (C) Copyright David Brownell 2000 (kernel hotplug, usb_device_id)
- * (C) Copyright Yggdrasil Computing, Inc. 2000
- *     (usb_device_id matching changes by Adam J. Richter)
- *
- * Adapted for U-Boot:
- * (C) Copyright 2001 Denis Peter, MPL AG Switzerland
- *
- * See file CREDITS for list of people who contributed to this
- * project.
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- * MA 02111-1307 USA
- *
- */
 
 /*
  * How it works:
@@ -44,29 +8,15 @@
  *
  * For each transfer (except "Interrupt") we wait for completion.
  */
-#include <common.h>
-#include <command.h>
-#include <asm/processor.h>
-#include <linux/compiler.h>
-#include <linux/ctype.h>
-#include <asm/byteorder.h>
-#include <asm/unaligned.h>
+#include "types.h"
+#include "defs.h"
+#include "param.h"
+#include "arm.h"
+#include "proc.h"
+#include "usb.h"
 
-#include <usb.h>
-#ifdef CONFIG_4xx
-#include <asm/4xx_pci.h>
-#endif
-
-#ifdef DEBUG
-#define USB_DEBUG	1
-#define USB_HUB_DEBUG	1
-#else
-#define USB_DEBUG	0
-#define USB_HUB_DEBUG	0
-#endif
-
-#define USB_cprintf(fmt, args...)	debug_cond(USB_DEBUG, fmt, ##args)
-#define USB_HUB_cprintf(fmt, args...)	debug_cond(USB_HUB_DEBUG, fmt, ##args)
+#define USB_cprintf(fmt, args...)	cprintf("USB: "fmt, ##args)
+#define USB_HUB_cprintf(fmt, args...)	cprintf("USB hub: "fmt, ##args)
 
 #define USB_BUFSIZ	512
 
@@ -104,9 +54,10 @@ int usb_init(void)
 		/* init low_level USB */
 		cprintf("USB%d:   ", i);
 		if (usb_lowlevel_init(i, &ctrl)) {
-			puts("lowlevel init failed\n");
+			cprintf ("lowlevel init failed\n");
 			continue;
 		}
+        
 		/*
 		 * lowlevel init is OK, now scan the bus for devices
 		 * i.e. search HUBs and configure them
@@ -114,26 +65,29 @@ int usb_init(void)
 		start_index = dev_index;
 		cprintf("scanning bus %d for devices... ", i);
 		dev = usb_alloc_new_device(ctrl);
+        
 		/*
 		 * device 0 is always present
 		 * (root hub, so let it analyze)
 		 */
-		if (dev)
+		if (dev) {
 			usb_new_device(dev);
+        }
 
-		if (start_index == dev_index)
-			puts("No USB Device found\n");
-		else
-			cprintf("%d USB Device(s) found\n",
-				dev_index - start_index);
+		if (start_index == dev_index) {
+			cprintf ("No USB Device found\n");
+		} else {
+			cprintf("%d USB Device(s) found\n", dev_index - start_index);
+        }
 
 		usb_started = 1;
 	}
 
 	USB_cprintf("scan end\n");
+    
 	/* if we were not able to find at least one working bus, bail out */
 	if (!usb_started) {
-		puts("USB error: all controllers failed lowlevel init\n");
+		cprintf ("USB error: all controllers failed lowlevel init\n");
 		return -1;
 	}
 
@@ -184,7 +138,7 @@ int usb_disable_asynch(int disable)
  * submits an Interrupt Message
  */
 int usb_submit_int_msg(struct usb_device *dev, unsigned long pipe,
-			void *buffer, int transfer_len, int interval)
+                       void *buffer, int transfer_len, int interval)
 {
 	return submit_int_msg(dev, pipe, buffer, transfer_len, interval);
 }
@@ -199,15 +153,24 @@ int usb_submit_int_msg(struct usb_device *dev, unsigned long pipe,
  * and the current status are stored in the dev->act_len and dev->status.
  */
 int usb_control_msg(struct usb_device *dev, unsigned int pipe,
-			unsigned char request, unsigned char requesttype,
-			unsigned short value, unsigned short index,
-			void *data, unsigned short size, int timeout)
+                    unsigned char request, unsigned char requesttype,
+                    unsigned short value, unsigned short index,
+                    void *data, unsigned short size, int timeout)
 {
-	ALLOC_CACHE_ALIGN_BUFFER(struct devrequest, setup_packet, 1);
+    struct devrequest *setup_packet;
+    int ret = -1;
+
+
+    // our allocator guarantees 64-byte alignment
+    setup_packet = kmalloc (get_order(sizeof(struct devrequest)));
+
+	if (setup_packet == NULL) {
+	    return -1;
+	}
 
 	if ((timeout == 0) && (!asynch_allowed)) {
 		/* request for a asynch control pipe is not allowed */
-		return -1;
+		goto on_exit;
 	}
 
 	/* set setup command */
@@ -216,15 +179,21 @@ int usb_control_msg(struct usb_device *dev, unsigned int pipe,
 	setup_packet->value = cpu_to_le16(value);
 	setup_packet->index = cpu_to_le16(index);
 	setup_packet->length = cpu_to_le16(size);
-	USB_cprintf("usb_control_msg: request: 0x%X, requesttype: 0x%X, " \
-		   "value 0x%X index 0x%X length 0x%X\n",
-		   request, requesttype, value, index, size);
+
+	USB_cprintf("usb_control_msg: request: 0x%x, requesttype: 0x%x, " \
+                "value 0x%x index 0x%x length 0x%x\n",
+                request, requesttype, value, index, size);
+
 	dev->status = USB_ST_NOT_PROC; /*not yet processed */
 
-	if (submit_control_msg(dev, pipe, data, size, setup_packet) < 0)
-		return -1;
-	if (timeout == 0)
-		return (int)size;
+	if (submit_control_msg(dev, pipe, data, size, setup_packet) < 0) {
+	    goto on_exit;
+	}
+
+	if (timeout == 0) {
+        ret = (int)size;
+        goto on_exit;
+	}
 
 	/*
 	 * Wait for status to update until timeout expires, USB driver
@@ -232,14 +201,20 @@ int usb_control_msg(struct usb_device *dev, unsigned int pipe,
 	 * been completed.
 	 */
 	while (timeout--) {
-		if (!((volatile unsigned long)dev->status & USB_ST_NOT_PROC))
+		if (!((volatile unsigned long)dev->status & USB_ST_NOT_PROC)) {
 			break;
-		mdelay(1);
-	}
-	if (dev->status)
-		return -1;
+		}
 
-	return dev->act_len;
+		micro_delay(1);
+	}
+
+	if (!dev->status) {
+	    ret = dev->act_len;
+	}
+
+on_exit:
+    kfree(setup_packet, get_order(sizeof(*setup_packet)));
+	return ret;
 
 }
 
@@ -249,7 +224,7 @@ int usb_control_msg(struct usb_device *dev, unsigned int pipe,
  * synchronous behavior
  */
 int usb_bulk_msg(struct usb_device *dev, unsigned int pipe,
-			void *data, int len, int *actual_length, int timeout)
+                 void *data, int len, int *actual_length, int timeout)
 {
 	if (len < 0)
 		return -1;
@@ -259,7 +234,7 @@ int usb_bulk_msg(struct usb_device *dev, unsigned int pipe,
 	while (timeout--) {
 		if (!((volatile unsigned long)dev->status & USB_ST_NOT_PROC))
 			break;
-		mdelay(1);
+		micro_delay(1);
 	}
 	*actual_length = dev->act_len;
 	if (dev->status == 0)
@@ -297,7 +272,7 @@ int usb_maxpacket(struct usb_device *dev, unsigned long pipe)
  *
  * NOTE: Similar behaviour was observed with GCC4.6 on ARMv5.
  */
-static void noinline
+static void
 usb_set_maxpacket_ep(struct usb_device *dev, int if_idx, int ep_idx)
 {
 	int b;
@@ -307,29 +282,29 @@ usb_set_maxpacket_ep(struct usb_device *dev, int if_idx, int ep_idx)
 	ep = &dev->config.if_desc[if_idx].ep_desc[ep_idx];
 
 	b = ep->bEndpointAddress & USB_ENDPOINT_NUMBER_MASK;
-	ep_wMaxPacketSize = get_unaligned(&ep->wMaxPacketSize);
+	ep_wMaxPacketSize = ep->wMaxPacketSize;
 
 	if ((ep->bmAttributes & USB_ENDPOINT_XFERTYPE_MASK) ==
-						USB_ENDPOINT_XFER_CONTROL) {
+        USB_ENDPOINT_XFER_CONTROL) {
 		/* Control => bidirectional */
 		dev->epmaxpacketout[b] = ep_wMaxPacketSize;
 		dev->epmaxpacketin[b] = ep_wMaxPacketSize;
 		USB_cprintf("##Control EP epmaxpacketout/in[%d] = %d\n",
-			   b, dev->epmaxpacketin[b]);
+                    b, dev->epmaxpacketin[b]);
 	} else {
 		if ((ep->bEndpointAddress & 0x80) == 0) {
 			/* OUT Endpoint */
 			if (ep_wMaxPacketSize > dev->epmaxpacketout[b]) {
 				dev->epmaxpacketout[b] = ep_wMaxPacketSize;
 				USB_cprintf("##EP epmaxpacketout[%d] = %d\n",
-					   b, dev->epmaxpacketout[b]);
+                            b, dev->epmaxpacketout[b]);
 			}
 		} else {
 			/* IN Endpoint */
 			if (ep_wMaxPacketSize > dev->epmaxpacketin[b]) {
 				dev->epmaxpacketin[b] = ep_wMaxPacketSize;
 				USB_cprintf("##EP epmaxpacketin[%d] = %d\n",
-					   b, dev->epmaxpacketin[b]);
+                            b, dev->epmaxpacketin[b]);
 			}
 		} /* if out */
 	} /* if control */
@@ -342,9 +317,11 @@ static int usb_set_maxpacket(struct usb_device *dev)
 {
 	int i, ii;
 
-	for (i = 0; i < dev->config.desc.bNumInterfaces; i++)
-		for (ii = 0; ii < dev->config.if_desc[i].desc.bNumEndpoints; ii++)
+	for (i = 0; i < dev->config.desc.bNumInterfaces; i++) {
+		for (ii = 0; ii < dev->config.if_desc[i].desc.bNumEndpoints; ii++) {
 			usb_set_maxpacket_ep(dev, i, ii);
+		}
+    }
 
 	return 0;
 }
@@ -354,7 +331,7 @@ static int usb_set_maxpacket(struct usb_device *dev)
  * Note that all little/big endian swapping are done automatically.
  */
 static int usb_parse_config(struct usb_device *dev,
-			unsigned char *buffer, int cfgno)
+                            unsigned char *buffer, int cfgno)
 {
 	struct usb_descriptor_header *head;
 	int index, ifno, epno, curr_if_num;
@@ -369,11 +346,11 @@ static int usb_parse_config(struct usb_device *dev,
 	head = (struct usb_descriptor_header *) &buffer[0];
 	if (head->bDescriptorType != USB_DT_CONFIG) {
 		cprintf(" ERROR: NOT USB_CONFIG_DESC %x\n",
-			head->bDescriptorType);
+                head->bDescriptorType);
 		return -1;
 	}
 	memcpy(&dev->config, buffer, buffer[0]);
-	le16_to_cpus(&(dev->config.desc.wTotalLength));
+	//le16_to_cpus(&(dev->config.desc.wTotalLength));
 	dev->config.no_of_if = 0;
 
 	index = dev->config.desc.bLength;
@@ -382,56 +359,50 @@ static int usb_parse_config(struct usb_device *dev,
 	head = (struct usb_descriptor_header *) &buffer[index];
 	while (index + 1 < dev->config.desc.wTotalLength) {
 		switch (head->bDescriptorType) {
-		case USB_DT_INTERFACE:
-			if (((struct usb_interface_descriptor *) \
-			     &buffer[index])->bInterfaceNumber != curr_if_num) {
-				/* this is a new interface, copy new desc */
-				ifno = dev->config.no_of_if;
-				dev->config.no_of_if++;
-				memcpy(&dev->config.if_desc[ifno],
-					&buffer[index], buffer[index]);
-				dev->config.if_desc[ifno].no_of_ep = 0;
-				dev->config.if_desc[ifno].num_altsetting = 1;
-				curr_if_num =
-				     dev->config.if_desc[ifno].desc.bInterfaceNumber;
-			} else {
-				/* found alternate setting for the interface */
-				dev->config.if_desc[ifno].num_altsetting++;
-			}
-			break;
-		case USB_DT_ENDPOINT:
-			epno = dev->config.if_desc[ifno].no_of_ep;
-			/* found an endpoint */
-			dev->config.if_desc[ifno].no_of_ep++;
-			memcpy(&dev->config.if_desc[ifno].ep_desc[epno],
-				&buffer[index], buffer[index]);
-			ep_wMaxPacketSize = get_unaligned(&dev->config.\
-							if_desc[ifno].\
-							ep_desc[epno].\
-							wMaxPacketSize);
-			put_unaligned(le16_to_cpu(ep_wMaxPacketSize),
-					&dev->config.\
-					if_desc[ifno].\
-					ep_desc[epno].\
-					wMaxPacketSize);
-			USB_cprintf("if %d, ep %d\n", ifno, epno);
-			break;
-		default:
-			if (head->bLength == 0)
-				return 1;
+            case USB_DT_INTERFACE:
+                if (((struct usb_interface_descriptor *) \
+                     &buffer[index])->bInterfaceNumber != curr_if_num) {
+                    /* this is a new interface, copy new desc */
+                    ifno = dev->config.no_of_if;
+                    dev->config.no_of_if++;
+                    memcpy(&dev->config.if_desc[ifno],
+                           &buffer[index], buffer[index]);
+                    dev->config.if_desc[ifno].no_of_ep = 0;
+                    dev->config.if_desc[ifno].num_altsetting = 1;
+                    curr_if_num =
+                    dev->config.if_desc[ifno].desc.bInterfaceNumber;
+                } else {
+                    /* found alternate setting for the interface */
+                    dev->config.if_desc[ifno].num_altsetting++;
+                }
+                break;
+            case USB_DT_ENDPOINT:
+                epno = dev->config.if_desc[ifno].no_of_ep;
+                /* found an endpoint */
+                dev->config.if_desc[ifno].no_of_ep++;
+                memcpy(&dev->config.if_desc[ifno].ep_desc[epno],
+                       &buffer[index], buffer[index]);
+                ep_wMaxPacketSize = dev->config.if_desc[ifno].ep_desc[epno].wMaxPacketSize;
+                le16_to_cpu(ep_wMaxPacketSize) = dev->config.\
+                if_desc[ifno].\
+                ep_desc[epno].\
+                wMaxPacketSize;
+                USB_cprintf("if %d, ep %d\n", ifno, epno);
+                break;
+            default:
+                if (head->bLength == 0)
+                    return 1;
 
-			USB_cprintf("unknown Description Type : %x\n",
-				   head->bDescriptorType);
+                USB_cprintf("unknown Description Type : %x\n",
+                            head->bDescriptorType);
 
 			{
-#ifdef USB_DEBUG
 				unsigned char *ch = (unsigned char *)head;
-#endif
 				for (i = 0; i < head->bLength; i++)
-					USB_cprintf("%02X ", *ch++);
+					USB_cprintf("%02x ", *ch++);
 				USB_cprintf("\n\n\n");
 			}
-			break;
+                break;
 		}
 		index += head->bLength;
 		head = (struct usb_descriptor_header *)&buffer[index];
@@ -450,8 +421,8 @@ int usb_clear_halt(struct usb_device *dev, int pipe)
 	int endp = usb_pipeendpoint(pipe)|(usb_pipein(pipe)<<7);
 
 	result = usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
-				 USB_REQ_CLEAR_FEATURE, USB_RECIP_ENDPOINT, 0,
-				 endp, NULL, 0, USB_CNTL_TIMEOUT * 3);
+                             USB_REQ_CLEAR_FEATURE, USB_RECIP_ENDPOINT, 0,
+                             endp, NULL, 0, USB_CNTL_TIMEOUT * 3);
 
 	/* don't clear if failed */
 	if (result < 0)
@@ -474,13 +445,13 @@ int usb_clear_halt(struct usb_device *dev, int pipe)
  * get_descriptor type
  */
 static int usb_get_descriptor(struct usb_device *dev, unsigned char type,
-			unsigned char index, void *buf, int size)
+                              unsigned char index, void *buf, int size)
 {
 	int res;
 	res = usb_control_msg(dev, usb_rcvctrlpipe(dev, 0),
-			USB_REQ_GET_DESCRIPTOR, USB_DIR_IN,
-			(type << 8) + index, 0,
-			buf, size, USB_CNTL_TIMEOUT);
+                          USB_REQ_GET_DESCRIPTOR, USB_DIR_IN,
+                          (type << 8) + index, 0,
+                          buf, size, USB_CNTL_TIMEOUT);
 	return res;
 }
 
@@ -488,7 +459,7 @@ static int usb_get_descriptor(struct usb_device *dev, unsigned char type,
  * gets configuration cfgno and store it in the buffer
  */
 int usb_get_configuration_no(struct usb_device *dev,
-			     unsigned char *buffer, int cfgno)
+                             unsigned char *buffer, int cfgno)
 {
 	int result;
 	unsigned int tmp;
@@ -498,24 +469,24 @@ int usb_get_configuration_no(struct usb_device *dev,
 	result = usb_get_descriptor(dev, USB_DT_CONFIG, cfgno, buffer, 9);
 	if (result < 9) {
 		if (result < 0)
-			cprintf("unable to get descriptor, error %lX\n",
-				dev->status);
+			cprintf("unable to get descriptor, error %x\n",
+                    dev->status);
 		else
 			cprintf("config descriptor too short " \
-				"(expected %i, got %i)\n", 9, result);
+                    "(expected %d, got %d)\n", 9, result);
 		return -1;
 	}
 	tmp = le16_to_cpu(config->wTotalLength);
 
 	if (tmp > USB_BUFSIZ) {
 		cprintf("usb_get_configuration_no: failed to get " \
-		       "descriptor - too long: %d\n", tmp);
+                "descriptor - too long: %d\n", tmp);
 		return -1;
 	}
 
 	result = usb_get_descriptor(dev, USB_DT_CONFIG, cfgno, buffer, tmp);
 	USB_cprintf("get_conf_no %d Result %d, wLength %d\n",
-		   cfgno, result, tmp);
+                cfgno, result, tmp);
 	return result;
 }
 
@@ -529,9 +500,9 @@ static int usb_set_address(struct usb_device *dev)
 
 	USB_cprintf("set address %d\n", dev->devnum);
 	res = usb_control_msg(dev, usb_snddefctrl(dev),
-				USB_REQ_SET_ADDRESS, 0,
-				(dev->devnum), 0,
-				NULL, 0, USB_CNTL_TIMEOUT);
+                          USB_REQ_SET_ADDRESS, 0,
+                          (dev->devnum), 0,
+                          NULL, 0, USB_CNTL_TIMEOUT);
 	return res;
 }
 
@@ -564,9 +535,9 @@ int usb_set_interface(struct usb_device *dev, int interface, int alternate)
 		return 0;
 
 	ret = usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
-				USB_REQ_SET_INTERFACE, USB_RECIP_INTERFACE,
-				alternate, interface, NULL, 0,
-				USB_CNTL_TIMEOUT * 5);
+                          USB_REQ_SET_INTERFACE, USB_RECIP_INTERFACE,
+                          alternate, interface, NULL, 0,
+                          USB_CNTL_TIMEOUT * 5);
 	if (ret < 0)
 		return ret;
 
@@ -582,9 +553,9 @@ static int usb_set_configuration(struct usb_device *dev, int configuration)
 	USB_cprintf("set configuration %d\n", configuration);
 	/* set setup command */
 	res = usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
-				USB_REQ_SET_CONFIGURATION, 0,
-				configuration, 0,
-				NULL, 0, USB_CNTL_TIMEOUT);
+                          USB_REQ_SET_CONFIGURATION, 0,
+                          configuration, 0,
+                          NULL, 0, USB_CNTL_TIMEOUT);
 	if (res == 0) {
 		dev->toggle[0] = 0;
 		dev->toggle[1] = 0;
@@ -599,8 +570,8 @@ static int usb_set_configuration(struct usb_device *dev, int configuration)
 int usb_set_protocol(struct usb_device *dev, int ifnum, int protocol)
 {
 	return usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
-		USB_REQ_SET_PROTOCOL, USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		protocol, ifnum, NULL, 0, USB_CNTL_TIMEOUT);
+                           USB_REQ_SET_PROTOCOL, USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           protocol, ifnum, NULL, 0, USB_CNTL_TIMEOUT);
 }
 
 /********************************************************************
@@ -609,38 +580,38 @@ int usb_set_protocol(struct usb_device *dev, int ifnum, int protocol)
 int usb_set_idle(struct usb_device *dev, int ifnum, int duration, int report_id)
 {
 	return usb_control_msg(dev, usb_sndctrlpipe(dev, 0),
-		USB_REQ_SET_IDLE, USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-		(duration << 8) | report_id, ifnum, NULL, 0, USB_CNTL_TIMEOUT);
+                           USB_REQ_SET_IDLE, USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           (duration << 8) | report_id, ifnum, NULL, 0, USB_CNTL_TIMEOUT);
 }
 
 /********************************************************************
  * get report
  */
 int usb_get_report(struct usb_device *dev, int ifnum, unsigned char type,
-		   unsigned char id, void *buf, int size)
+                   unsigned char id, void *buf, int size)
 {
 	return usb_control_msg(dev, usb_rcvctrlpipe(dev, 0),
-			USB_REQ_GET_REPORT,
-			USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-			(type << 8) + id, ifnum, buf, size, USB_CNTL_TIMEOUT);
+                           USB_REQ_GET_REPORT,
+                           USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                           (type << 8) + id, ifnum, buf, size, USB_CNTL_TIMEOUT);
 }
 
 /********************************************************************
  * get class descriptor
  */
 int usb_get_class_descriptor(struct usb_device *dev, int ifnum,
-		unsigned char type, unsigned char id, void *buf, int size)
+                             unsigned char type, unsigned char id, void *buf, int size)
 {
 	return usb_control_msg(dev, usb_rcvctrlpipe(dev, 0),
-		USB_REQ_GET_DESCRIPTOR, USB_RECIP_INTERFACE | USB_DIR_IN,
-		(type << 8) + id, ifnum, buf, size, USB_CNTL_TIMEOUT);
+                           USB_REQ_GET_DESCRIPTOR, USB_RECIP_INTERFACE | USB_DIR_IN,
+                           (type << 8) + id, ifnum, buf, size, USB_CNTL_TIMEOUT);
 }
 
 /********************************************************************
  * get string index in buffer
  */
 static int usb_get_string(struct usb_device *dev, unsigned short langid,
-		   unsigned char index, void *buf, int size)
+                          unsigned char index, void *buf, int size)
 {
 	int i;
 	int result;
@@ -648,9 +619,9 @@ static int usb_get_string(struct usb_device *dev, unsigned short langid,
 	for (i = 0; i < 3; ++i) {
 		/* some devices are flaky */
 		result = usb_control_msg(dev, usb_rcvctrlpipe(dev, 0),
-			USB_REQ_GET_DESCRIPTOR, USB_DIR_IN,
-			(USB_DT_STRING << 8) + index, langid, buf, size,
-			USB_CNTL_TIMEOUT);
+                                 USB_REQ_GET_DESCRIPTOR, USB_DIR_IN,
+                                 (USB_DT_STRING << 8) + index, langid, buf, size,
+                                 USB_CNTL_TIMEOUT);
 
 		if (result > 0)
 			break;
@@ -676,7 +647,7 @@ static void usb_try_string_workarounds(unsigned char *buf, int *length)
 
 
 static int usb_string_sub(struct usb_device *dev, unsigned int langid,
-		unsigned int index, unsigned char *buf)
+                          unsigned int index, unsigned char *buf)
 {
 	int rc;
 
@@ -715,41 +686,47 @@ static int usb_string_sub(struct usb_device *dev, unsigned int langid,
  * Get string index and translate it to ascii.
  * returns string length (> 0) or error (< 0)
  */
-int usb_string(struct usb_device *dev, int index, char *buf, size_t size)
+int usb_string(struct usb_device *dev, int index, char *buf, int size)
 {
-	ALLOC_CACHE_ALIGN_BUFFER(unsigned char, mybuf, USB_BUFSIZ);
 	unsigned char *tbuf;
 	int err;
 	unsigned int u, idx;
+    unsigned char *mybuf;
 
-	if (size <= 0 || !buf || !index)
+    mybuf = kmalloc (get_order(USB_BUFSIZ));
+
+	if (size <= 0 || !buf || !index || !mybuf)
 		return -1;
+
 	buf[0] = 0;
 	tbuf = &mybuf[0];
+    err = -1;
 
 	/* get langid for strings if it's not yet known */
 	if (!dev->have_langid) {
 		err = usb_string_sub(dev, 0, 0, tbuf);
 		if (err < 0) {
 			USB_cprintf("error getting string descriptor 0 " \
-				   "(error=%lx)\n", dev->status);
-			return -1;
+                        "(error=%x)\n", dev->status);
+			goto on_exit;
 		} else if (tbuf[0] < 4) {
 			USB_cprintf("string descriptor 0 too short\n");
-			return -1;
+			err = -1;
+			goto on_exit;
 		} else {
 			dev->have_langid = -1;
 			dev->string_langid = tbuf[2] | (tbuf[3] << 8);
-				/* always use the first langid listed */
+            /* always use the first langid listed */
 			USB_cprintf("USB device number %d default " \
-				   "language ID 0x%x\n",
-				   dev->devnum, dev->string_langid);
+                        "language ID 0x%x\n",
+                        dev->devnum, dev->string_langid);
 		}
 	}
 
 	err = usb_string_sub(dev, dev->string_langid, index, tbuf);
-	if (err < 0)
-		return err;
+	if (err < 0) {
+		goto on_exit;
+	}
 
 	size--;		/* leave room for trailing NULL char in output buffer */
 	for (idx = 0, u = 2; u < err; u += 2) {
@@ -762,6 +739,9 @@ int usb_string(struct usb_device *dev, int index, char *buf, size_t size)
 	}
 	buf[idx] = 0;
 	err = idx;
+
+on_exit:
+    kfree(mybuf, get_order(USB_BUFSIZ));
 	return err;
 }
 
@@ -817,7 +797,9 @@ int usb_new_device(struct usb_device *dev)
 {
 	int addr, err;
 	int tmp;
-	ALLOC_CACHE_ALIGN_BUFFER(unsigned char, tmpbuf, USB_BUFSIZ);
+	unsigned char *tmpbuf;
+
+	tmpbuf = kmalloc(get_order(USB_BUFSIZ));
 
 	/* We still haven't set the Address yet */
 	addr = dev->devnum;
@@ -837,7 +819,8 @@ int usb_new_device(struct usb_device *dev)
 	err = usb_get_descriptor(dev, USB_DT_DEVICE, 0, tmpbuf, 8);
 	if (err < 8) {
 		cprintf("\n      USB device not responding, " \
-		       "giving up (status=%lX)\n", dev->status);
+                "giving up (status=%x)\n", dev->status);
+		kfree(tmpbuf, get_order(USB_BUFSIZ));
 		return 1;
 	}
 	memcpy(&dev->descriptor, tmpbuf, 8);
@@ -869,6 +852,7 @@ int usb_new_device(struct usb_device *dev)
 	err = usb_get_descriptor(dev, USB_DT_DEVICE, 0, desc, 64);
 	if (err < 0) {
 		USB_cprintf("usb_new_device: usb_get_descriptor() failed\n");
+		kfree(tmpbuf, get_order(USB_BUFSIZ));
 		return 1;
 	}
 
@@ -886,6 +870,7 @@ int usb_new_device(struct usb_device *dev)
 		}
 		if (port < 0) {
 			cprintf("usb_new_device:cannot locate device's port.\n");
+			kfree(tmpbuf, get_order(USB_BUFSIZ));
 			return 1;
 		}
 
@@ -893,6 +878,7 @@ int usb_new_device(struct usb_device *dev)
 		err = hub_port_reset(dev->parent, port, &portstatus);
 		if (err < 0) {
 			cprintf("\n     Couldn't reset port %i\n", port);
+			kfree(tmpbuf, get_order(USB_BUFSIZ));
 			return 1;
 		}
 	}
@@ -901,18 +887,18 @@ int usb_new_device(struct usb_device *dev)
 	dev->epmaxpacketin[0] = dev->descriptor.bMaxPacketSize0;
 	dev->epmaxpacketout[0] = dev->descriptor.bMaxPacketSize0;
 	switch (dev->descriptor.bMaxPacketSize0) {
-	case 8:
-		dev->maxpacketsize  = PACKET_SIZE_8;
-		break;
-	case 16:
-		dev->maxpacketsize = PACKET_SIZE_16;
-		break;
-	case 32:
-		dev->maxpacketsize = PACKET_SIZE_32;
-		break;
-	case 64:
-		dev->maxpacketsize = PACKET_SIZE_64;
-		break;
+        case 8:
+            dev->maxpacketsize  = PACKET_SIZE_8;
+            break;
+        case 16:
+            dev->maxpacketsize = PACKET_SIZE_16;
+            break;
+        case 32:
+            dev->maxpacketsize = PACKET_SIZE_32;
+            break;
+        case 64:
+            dev->maxpacketsize = PACKET_SIZE_64;
+            break;
 	}
 	dev->devnum = addr;
 
@@ -920,37 +906,40 @@ int usb_new_device(struct usb_device *dev)
 
 	if (err < 0) {
 		cprintf("\n      USB device not accepting new address " \
-			"(error=%lX)\n", dev->status);
+                "(error=%x)\n", dev->status);
+        kfree(tmpbuf, get_order(USB_BUFSIZ));
 		return 1;
 	}
 
-	mdelay(10);	/* Let the SET_ADDRESS settle */
+	micro_delay(10);	/* Let the SET_ADDRESS settle */
 
 	tmp = sizeof(dev->descriptor);
 
 	err = usb_get_descriptor(dev, USB_DT_DEVICE, 0,
-				 tmpbuf, sizeof(dev->descriptor));
+                             tmpbuf, sizeof(dev->descriptor));
 	if (err < tmp) {
 		if (err < 0)
 			cprintf("unable to get device descriptor (error=%d)\n",
-			       err);
+                    err);
 		else
 			cprintf("USB device descriptor short read " \
-				"(expected %i, got %i)\n", tmp, err);
+                    "(expected %i, got %i)\n", tmp, err);
+		kfree(tmpbuf, get_order(USB_BUFSIZ));
 		return 1;
 	}
 	memcpy(&dev->descriptor, tmpbuf, sizeof(dev->descriptor));
 	/* correct le values */
-	le16_to_cpus(&dev->descriptor.bcdUSB);
-	le16_to_cpus(&dev->descriptor.idVendor);
-	le16_to_cpus(&dev->descriptor.idProduct);
-	le16_to_cpus(&dev->descriptor.bcdDevice);
+	/*le16_to_cpus(&dev->descriptor.bcdUSB);
+     le16_to_cpus(&dev->descriptor.idVendor);
+     le16_to_cpus(&dev->descriptor.idProduct);
+     le16_to_cpus(&dev->descriptor.bcdDevice);*/
 	/* only support for one config for now */
 	err = usb_get_configuration_no(dev, tmpbuf, 0);
 	if (err < 0) {
 		cprintf("usb_new_device: Cannot read configuration, " \
-		       "skipping device %04x:%04x\n",
-		       dev->descriptor.idVendor, dev->descriptor.idProduct);
+                "skipping device %x:%x\n",
+                dev->descriptor.idVendor, dev->descriptor.idProduct);
+		kfree(tmpbuf, get_order(USB_BUFSIZ));
 		return -1;
 	}
 	usb_parse_config(dev, tmpbuf, 0);
@@ -958,29 +947,31 @@ int usb_new_device(struct usb_device *dev)
 	/* we set the default configuration here */
 	if (usb_set_configuration(dev, dev->config.desc.bConfigurationValue)) {
 		cprintf("failed to set default configuration " \
-			"len %d, status %lX\n", dev->act_len, dev->status);
+                "len %d, status %x\n", dev->act_len, dev->status);
+	    kfree(tmpbuf, get_order(USB_BUFSIZ));
 		return -1;
 	}
 	USB_cprintf("new device strings: Mfr=%d, Product=%d, SerialNumber=%d\n",
-		   dev->descriptor.iManufacturer, dev->descriptor.iProduct,
-		   dev->descriptor.iSerialNumber);
+                dev->descriptor.iManufacturer, dev->descriptor.iProduct,
+                dev->descriptor.iSerialNumber);
 	memset(dev->mf, 0, sizeof(dev->mf));
 	memset(dev->prod, 0, sizeof(dev->prod));
 	memset(dev->serial, 0, sizeof(dev->serial));
 	if (dev->descriptor.iManufacturer)
 		usb_string(dev, dev->descriptor.iManufacturer,
-			   dev->mf, sizeof(dev->mf));
+                   dev->mf, sizeof(dev->mf));
 	if (dev->descriptor.iProduct)
 		usb_string(dev, dev->descriptor.iProduct,
-			   dev->prod, sizeof(dev->prod));
+                   dev->prod, sizeof(dev->prod));
 	if (dev->descriptor.iSerialNumber)
 		usb_string(dev, dev->descriptor.iSerialNumber,
-			   dev->serial, sizeof(dev->serial));
+                   dev->serial, sizeof(dev->serial));
 	USB_cprintf("Manufacturer %s\n", dev->mf);
 	USB_cprintf("Product      %s\n", dev->prod);
 	USB_cprintf("SerialNumber %s\n", dev->serial);
 	/* now prode if the device is a hub */
 	usb_hub_probe(dev, 0);
+	kfree(tmpbuf, get_order(USB_BUFSIZ));
 	return 0;
 }
 
