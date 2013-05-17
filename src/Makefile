@@ -50,8 +50,8 @@ initcode: initcode.S
 	$(OBJDUMP) -S initcode.o > initcode.asm
 
 libusb.a: 
-	make -C usb_xv6
-	cp usb_xv6/libusb.a .
+	make -C usb
+	cp usb/libusb.a .
 
 fs.img: 
 	make -C usr
@@ -62,4 +62,3 @@ clean:
 	initcode initcode.out libusb.a kernel kernel.img xv6.img fs.img kernel.elf memfs mkfs
 	make -C usr clean
 	make -C usb clean
-	make -C usb_xv6 clean
