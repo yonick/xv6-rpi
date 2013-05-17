@@ -1,5 +1,6 @@
 /*
  * References: USB 2.0 Spec, USB in a Nutshell, USB Overview by Silicon Lab
+ * http://www.beyondlogic.org/usbnutshell/usb5.shtml
  */
 
 /* USB Descriptors - each USB device has a hierachy of descriptors to convern
@@ -25,18 +26,23 @@
  * state.
  *
  */
-
-
 #ifndef __USB_DESC_H__
 #define __USB_DESC_H__
 
-#define OUT         0x00
-#define IN          0x80
+// marcos to parse endpoint format:
+// c.f. http://www.beyondlogic.org/usbnutshell/usb5.shtml
+#define EP_OUT      0x00
+#define EP_IN       0x80
 
-#define CONTROL		0x00
-#define ISOCHRONOUS	0x01
-#define BULK		0x02
-#define INTERRUPT	0x03
+#define EP_CTRL		0x00
+#define EP_ISO		0x01
+#define EP_BULK		0x02
+#define EP_INT		0x03
+
+#define EP_DIR(ep)  	((ep)->bEndpointAddress & 0x80)
+#define EP_ISIN(ep) 	(EP_DIR(ep) == IN)
+#define EP_ADDR(ep) 	((ep)->bEndpointAddress & 0x0F)
+#define EP_TTYPE(ep)	((ep)->bmAttributes & 0x03)
 
 /*
  * standard usb descriptor structures

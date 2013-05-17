@@ -34,7 +34,7 @@
 /**
  * Host Channel Specific Registers. 500h-5FCh (500h + (chan_num * 20h))
  */
-struct dwc_hc_regs {
+struct hc_regs {
 	uint32 hcchar;/*Characteristic Register.*/
 	uint32 hcsplt;/*Split Control Register.*/
 	uint32 hcint;/*Interrupt Register.*/
@@ -98,7 +98,7 @@ struct dwc_regs {
 	char pad2[0x500 - 0x444];
 
 	/* host channels 0x500-0x700, each use 0x20 bytes*/
-	struct dwc_hc_regs hchans[MAX_CHANS];
+	struct hc_regs hchans[MAX_CHANS];
 };
 
 /* bit definition for registers of dwc_regs, copied from plan 9 dwcotg.h*/
