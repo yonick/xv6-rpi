@@ -41,6 +41,13 @@ enum {
 	Rsetaddr	= 5,
 	Rgetdesc	= 6,
 
+	/*Descriptor type*/
+	Ddevice = 1,
+	Dcfg = 2,
+	Dstring = 3,
+	Diface = 4,
+	Dep = 5,
+
 	Read = 1,
 	Write = 2,
 };

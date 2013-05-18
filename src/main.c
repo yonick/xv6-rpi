@@ -48,6 +48,7 @@ void kmain (void)
     fileinit ();				// file table
     iinit ();					// inode cache
     ideinit ();					// ide (memory block device)
+    usb_init ();
 
     timer_init (HZ);			// the timer (ticker)
     sti ();

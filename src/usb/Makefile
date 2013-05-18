@@ -2,7 +2,7 @@ include ../makefile.inc
 
 CFLAGS += -iquote ../ -Wno-error=unused-but-set-variable
 ASFLAGS += -I ../
-LIB = usb_dwc.o usb_misc.o
+LIB = usb.o usb_dwc.o usb_misc.o
 
 libusb.a : $(LIB) 
 	$(AR) -rcs libusb.a $(LIB)
