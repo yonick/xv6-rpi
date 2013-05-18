@@ -17,6 +17,34 @@ enum {
 	Highspeed,
 	Nospeed,
 
+	/* request type */
+	Rh2d = 0<<7,
+	Rd2h = 1<<7,
+	Rstd = 0<<5,
+	Rclass =  1<<5,
+	Rdev = 0,
+	Rep = 2,
+	Rother = 3,
+
+	/* req offsets */
+	Rtype	= 0,
+	Rreq	= 1,
+	Rvalue	= 2,
+	Rindex	= 4,
+	Rcount	= 6,
+	Rsetuplen = 8,
+
+	/* standard requests */
+	Rgetstatus	= 0,
+	Rclearfeature	= 1,
+	Rsetfeature	= 3,
+	Rsetaddr	= 5,
+	Rgetdesc	= 6,
+
+	Read = 1,
+	Write = 2,
+
+
 };
 
 // endpoints
@@ -28,6 +56,7 @@ struct usb_ep {
 	int					dir;		/* endpoint direction: IN/OUT*/
 	int					toggle;		/* toggle, USB uses 1 bit for sequencing*/
 	int					pollival;	/* poll interval for interrupt device*/
+	int					clrhalt;	/* clear the halt*/
 };
 
 // device

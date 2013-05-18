@@ -5,39 +5,40 @@
 #include "arm.h"
 #include "proc.h"
 #include "memlayout.h"
-#include "mmu.h"
 #include "dwc_regs.h"
 #include "usb.h"
 #include "usb_desc.h"
 
 #define DWC_PADDR 0x20980000
+#define HOW_MANY(x, y) (((x) + (y) -1) /(y))
+#define ROUND(x, y) (HOW_MANY(x, y) *(y))
 
-void dump_dwcregs (volatile struct dwc_regs *regs);
-int power_usb (void);
+void dump_dwcregs(volatile struct dwc_regs *regs);
+int power_usb(void);
 
 /* DWC host controller */
 static struct dwc_otg {
 	volatile struct dwc_regs *regs;
-	int						 nchan; 	// number of channels available (8)
-	uint32					 chanbusy;	// whether the channel is busy
+	int nchan; 	// number of channels available (8)
+	uint32 chanbusy;	// whether the channel is busy
 } dwc_ctrl;
 
-static struct hc_regs * alloc_chan (void)
+static struct hc_regs * alloc_chan(void)
 {
 	int i;
 
 	for (i = 0; i < dwc_ctrl.nchan; i++) {
 		if ((dwc_ctrl.chanbusy & (1 << i)) == 0) {
 			dwc_ctrl.chanbusy |= (1 << i);
-			return dwc_ctrl.regs->hchans+i;
+			return (struct hc_regs*)(dwc_ctrl.regs->hchans + i);
 		}
 	}
 
-	panic ("no channel is available\n");
-	return NULL;
+	panic("no channel is available\n");
+	return NULL ;
 }
 
-static void release_chan (struct hc_regs *chan)
+static void release_chan(struct hc_regs *chan)
 {
 	int i;
 
@@ -46,7 +47,7 @@ static void release_chan (struct hc_regs *chan)
 }
 
 /* setup the host channel for transaction to this endpoint*/
-static void setup_chan (struct hc_regs *hc, struct usb_ep *ep)
+static void setup_chan(struct hc_regs *hc, struct usb_ep *ep)
 {
 	int hcc;
 
@@ -54,7 +55,7 @@ static void setup_chan (struct hc_regs *hc, struct usb_ep *ep)
 	hcc = (ep->dev->id << ODevaddr);
 	hcc |= ep->maxpkt | (1 << OMulticnt) | (ep->id << OEpnum);
 
-	switch(ep->ttype){
+	switch (ep->ttype) {
 	case EP_CTRL:
 		hcc |= Epctl;
 		break;
@@ -72,13 +73,14 @@ static void setup_chan (struct hc_regs *hc, struct usb_ep *ep)
 		break;
 	}
 
-	switch(ep->dev->speed){
+	switch (ep->dev->speed) {
 	case Lowspeed:
 		hcc |= Lspddev;
 
 		/* fall through, to enable split transaction*/
 	case Fullspeed:
-		hc->hcsplt = Spltena | POS_ALL | (ep->dev->hub<<OHubaddr) | ep->dev->port;
+		hc->hcsplt = Spltena | POS_ALL | (ep->dev->hub << OHubaddr)
+				| ep->dev->port;
 		break;
 
 	default:
@@ -90,283 +92,353 @@ static void setup_chan (struct hc_regs *hc, struct usb_ep *ep)
 	hc->hcint = ~0;
 }
 
-static int
-chanio(Ep *ep, Hostchan *hc, int dir, int pid, void *a, int len)
+//busy wait for SOF
+static void sof_wait(void)
 {
-	Ctlr *ctlr;
-	int nleft, n, nt, i, maxpkt, npkt;
+	volatile struct dwc_regs *r;
+	uint32 start, now;
+
+	r = dwc_ctrl.regs;
+	r->gintsts = Sofintr;			// clear Sofint
+
+	start = get_tick();
+
+	while (r->gintsts & Sofintr) { 	// waiting for Sofint to be set
+		now = get_tick();
+
+		if (now - start >= 100) {
+			usbprt("wait too long for Sof");
+		}
+	}
+
+	r->gintsts = Sofintr;			// clear it
+}
+
+// busy wait the channel transfer results:
+static int wait_chan(struct usb_ep *ep, struct hc_regs *hc, int mask)
+{
+	uint32 start, now;
+	int intr;
+
+	intr = 0;
+
+	now = start = get_tick();
+
+	while (now < start + 100) {
+		intr = hc->hcint;
+
+		// the channel has halted, return
+		if ((intr & Chhltd) || (intr & mask)) {
+			break;
+		}
+
+		now = get_tick();
+	}
+
+	// disable the channel, but do not wait too long
+	hc->hcchar |= Chdis;
+	start = get_tick();
+
+	while (hc->hcchar & Chen) {
+		now = get_tick();
+
+		if (now - start >= 100) {
+			usbprt("ep%d.%d channel won't halt hcchar %x\n", ep->dev->id,
+					ep->id, hc->hcchar);
+			break;
+		}
+	}
+
+	return intr;
+}
+
+int chan_io(struct usb_ep *ep, struct hc_regs *hc, int dir, int pid, void *a,
+		int len)
+{
+	int nleft, n, nt, intr, maxpkt, npkt;
 	uint hcdma, hctsiz;
+	uint32 start, now;
 
-	ctlr = ep->hp->aux;
 	maxpkt = ep->maxpkt;
-	npkt = HOWMANY(len, ep->maxpkt);
-	if(npkt == 0)
-		npkt = 1;
+	npkt = HOW_MANY(len, ep->maxpkt);
 
-	hc->hcchar = (hc->hcchar & ~Epdir) | dir;
-	if(dir == Epin)
-		n = ROUND(len, ep->maxpkt);
-	else
+	if (npkt == 0) {
+		npkt = 1;
+	}
+
+	hc->hcchar = (hc->hcchar & ~Epdir) | dir; // set the communication dir
+
+	if (dir == Epin) {
+		n = ROUND (len, ep->maxpkt);
+	} else {
 		n = len;
-	hc->hctsiz = n | npkt<<OPktcnt | pid;
-	hc->hcdma  = PADDR(a);
+	}
+
+	hc->hctsiz = n | (npkt << OPktcnt) | pid;	// set DMA to start transfer
+	hc->hcdma = V2P(a);
 
 	nleft = len;
-	logstart(ep);
-	for(;;){
+
+	for (;;) {
 		hcdma = hc->hcdma;
 		hctsiz = hc->hctsiz;
+
 		hc->hctsiz = hctsiz & ~Dopng;
-		if(hc->hcchar&Chen){
-			dprint("ep%d.%d before chanio hcchar=%8.8ux\n",
-				ep->dev->nb, ep->nb, hc->hcchar);
-			hc->hcchar |= Chen | Chdis;
-			while(hc->hcchar&Chen)
-				;
-			hc->hcint = Chhltd;
+
+		if (hc->hcchar & Chen) {
+			usbprt("ep%d.%d before chanio hcchar=%x\n", ep->dev->id, ep->id,
+					hc->hcchar);
+
+			hc->hcchar |= Chen | Chdis; // enable and disable channel???
+
+			start = get_tick();
+
+			while (hc->hcchar & Chen) {
+				now = get_tick();
+
+				if (now - start >= 500) {
+					usbprt("waiting too long to disable hc\n");
+					break;
+				}
+			}
+
+			hc->hcint = Chhltd;			// clear channel halted
 		}
-		if((i = hc->hcint) != 0){
-			dprint("ep%d.%d before chanio hcint=%8.8ux\n",
-				ep->dev->nb, ep->nb, i);
-			hc->hcint = i;
+
+		if ((intr = hc->hcint) != 0) {
+			usbprt("ep%d.%d before chanio hcint=%x\n", ep->dev->id, ep->id,
+					intr);
+			hc->hcint = intr;
 		}
-		if(hc->hcsplt & Spltena){
-			qlock(&ctlr->split);
-			sofwait(ctlr, hc - ctlr->regs->hchan);
-			if((dwc.regs->hfnum & 1) == 0)
+
+		if (hc->hcsplt & Spltena) {
+			sof_wait(); // wait for start-of-frame
+
+			if ((dwc_ctrl.regs->hfnum & 1) == 0) {
 				hc->hcchar &= ~Oddfrm;
-			else
+			} else {
 				hc->hcchar |= Oddfrm;
+			}
 		}
-		hc->hcchar = (hc->hcchar &~ Chdis) | Chen;
-		clog(ep, hc);
-		if(ep->ttype == Tbulk && dir == Epin)
-			i = chanwait(ep, ctlr, hc, /* Ack| */ Chhltd);
-		else if(ep->ttype == Tintr && (hc->hcsplt & Spltena))
-			i = chanwait(ep, ctlr, hc, Chhltd);
-		else
-			i = chanwait(ep, ctlr, hc, Chhltd|Nak);
-		clog(ep, hc);
-		hc->hcint = i;
 
-		if(hc->hcsplt & Spltena){
+		// enable the channel
+		hc->hcchar = (hc->hcchar & ~Chdis) | Chen;
+
+		// wait for the channel to complete
+		if ((ep->ttype == EP_BULK) && (dir == Epin)) {
+			intr = wait_chan (ep, hc, Chhltd);
+
+		} else if (ep->ttype == EP_INT && (hc->hcsplt & Spltena)) {
+			intr = wait_chan(ep, hc, Chhltd);
+
+		} else {
+			intr = wait_chan(ep, hc, Chhltd | Nak);
+		}
+
+		hc->hcint = intr;
+
+		if (hc->hcsplt & Spltena) {
 			hc->hcsplt &= ~Compsplt;
-			qunlock(&ctlr->split);
 		}
 
-		if((i & Xfercomp) == 0 && i != (Chhltd|Ack) && i != Chhltd){
-			if(i & Stall)
-				error(Estalled);
-			if(i & Nyet)
-				continue;
-			if(i & Nak){
-				if(ep->ttype == Tintr)
-					tsleep(&up->sleep, return0, 0, ep->pollival);
-				else
-					tsleep(&up->sleep, return0, 0, 1);
+		// handle results
+		if ((intr & Xfercomp) == 0 && intr != (Chhltd | Ack)
+				&& intr != Chhltd) {
+			if (intr & Stall) {
+				usbprt("endpoing stalled: ep%d.%d\n", ep->dev->id, ep->id);
+				return -1;
+			}
+
+			// not ready yet, high-speed only, for split transaction
+			if (intr & Nyet) {
 				continue;
 			}
-			print("usbotg: ep%d.%d error intr %8.8ux\n",
-				ep->dev->nb, ep->nb, i);
-			if(i & ~(Chhltd|Ack))
-				error(Eio);
-			if(hc->hcdma != hcdma)
-				print("usbotg: weird hcdma %x->%x intr %x->%x\n",
-					hcdma, hc->hcdma, i, hc->hcint);
+
+			// no data to transfer, wait
+			if (intr & Nak) {
+				micro_delay(1);
+				continue;
+			}
+
+			usbprt ("ep%d.%d error intr %x\n", ep->dev->id, ep->id, intr);
+
+			// other errors: transaction error, babble error, frame overrun
+			if (intr & ~(Chhltd | Ack)) {
+				return -1;
+			}
+
+			// the channel received valid ACK and halted, just restart
+			if (hc->hcdma != hcdma) {
+				usbprt("weird hcdma %x->%x intr %x->%x\n", hcdma, hc->hcdma,
+						intr, hc->hcint);
+			}
 		}
+
+		// how many data transferred by DMA, adjust the leftover
 		n = hc->hcdma - hcdma;
-		if(n == 0){
-			if((hc->hctsiz & Pktcnt) != (hctsiz & Pktcnt))
+
+		if (n == 0) {
+			if ((hc->hctsiz & Pktcnt) != (hctsiz & Pktcnt)) {
 				break;
-			else
-				continue;
+			}
+
+			continue;
 		}
-		if(dir == Epin && ep->ttype == Tbulk && n == nleft){
+
+		// not all data transferred
+		if ((dir == Epin) && (ep->ttype == EP_BULK) && (n == nleft)) {
 			nt = (hctsiz & Xfersize) - (hc->hctsiz & Xfersize);
-			if(nt != n){
-				if(n == ROUND(nt, 4))
+
+			if (nt != n) {
+				if (n == ROUND(nt, 4)) {
 					n = nt;
-				else
-					print("usbotg: intr %8.8ux "
-						"dma %8.8ux-%8.8ux "
-						"hctsiz %8.8ux-%8.ux\n",
-						i, hcdma, hc->hcdma, hctsiz,
-						hc->hctsiz);
+				} else {
+					usbprt("chan_io: intr %x, dma %x-%x, hctsiz %x-%x\n", intr,
+							hcdma, hc->hcdma, hctsiz, hc->hctsiz);
+				}
 			}
 		}
-		if(n > nleft){
-			if(n != ROUND(nleft, 4))
-				dprint("too much: wanted %d got %d\n",
-					len, len - nleft + n);
+
+		if (n > nleft) {
+			if (n != ROUND(nleft, 4)) {
+				usbprt("too much: wanted %d got %d\n", len, len - nleft + n);
+			}
+
 			n = nleft;
 		}
+
 		nleft -= n;
-		if(nleft == 0 || (n % maxpkt) != 0)
+
+		if (nleft == 0 || (n % maxpkt) != 0) {
 			break;
-		if((i & Xfercomp) && ep->ttype != Tctl)
+		}
+
+		if ((intr & Xfercomp) && (ep->ttype != EP_CTRL)) {
 			break;
-		if(dir == Epout)
-			dprint("too little: nleft %d hcdma %x->%x hctsiz %x->%x intr %x\n",
-				nleft, hcdma, hc->hcdma, hctsiz, hc->hctsiz, i);
+		}
+
+		if (dir == Epout) {
+			usbprt("too little: nleft %d hcdma %x->%x hctsiz %x->%x intr %x\n",
+					nleft, hcdma, hc->hcdma, hctsiz, hc->hctsiz, intr);
+		}
 	}
-	logdump(ep);
+
 	return len - nleft;
 }
 
-static long
-eptrans(Ep *ep, int rw, void *a, long n)
+// a non-control transfer, control transfer is special
+int ep_trans(struct usb_ep *ep, int rw, void *a, int n)
 {
-	Hostchan *hc;
+	struct hc_regs *hc;
+	long sofar, m;
 
-	if(ep->clrhalt){
+	if (ep->clrhalt) {
 		ep->clrhalt = 0;
-		if(ep->mode != OREAD)
-			ep->toggle[Write] = DATA0;
-		if(ep->mode != OWRITE)
-			ep->toggle[Read] = DATA0;
+		ep->toggle = DATA0;
 	}
-	hc = chanalloc(ep);
-	if(waserror()){
-		ep->toggle[rw] = hc->hctsiz & Pid;
-		chanrelease(ep, hc);
-		if(strcmp(up->errstr, Estalled) == 0)
-			return 0;
-		nexterror();
-	}
-	chansetup(hc, ep);
-	if(rw == Read && ep->ttype == Tbulk){
-		long sofar, m;
 
+	hc = alloc_chan();
+	setup_chan (hc, ep);
+
+	if ((rw == Read) && (ep->ttype == EP_BULK)) {
 		sofar = 0;
-		do{
+
+		do {
 			m = n - sofar;
-			if(m > ep->maxpkt)
+
+			if (m > ep->maxpkt) {
 				m = ep->maxpkt;
-			m = chanio(ep, hc, Epin, ep->toggle[rw],
-				(char*)a + sofar, m);
-			ep->toggle[rw] = hc->hctsiz & Pid;
+			}
+
+			m = chan_io(ep, hc, Epin, ep->toggle, (char*) a + sofar, m);
+
+			ep->toggle = hc->hctsiz & Pid;
 			sofar += m;
-		}while(sofar < n && m == ep->maxpkt);
+		} while ((sofar < n) && (m == ep->maxpkt));
+
 		n = sofar;
-	}else{
-		n = chanio(ep, hc, rw == Read? Epin : Epout, ep->toggle[rw],
-			a, n);
-		ep->toggle[rw] = hc->hctsiz & Pid;
+	} else {
+		n = chan_io(ep, hc, rw == Read ? Epin : Epout, ep->toggle, a, n);
+		ep->toggle = hc->hctsiz & Pid;
 	}
-	chanrelease(ep, hc);
-	poperror();
+
+	release_chan(hc);
 	return n;
 }
 
-static long
-ctltrans(Ep *ep, uchar *req, long n)
+// perform a control transfer, control transfer is bi-directional
+static int ctl_trans(struct usb_ep *ep, uchar *req, int n)
 {
-	Hostchan *hc;
-	Epio *epio;
-	Block *b;
+	struct hc_regs *hc;
+	struct usb_setup *pkt;
 	uchar *data;
 	int datalen;
+	int ret;
 
-	epio = ep->aux;
-	if(epio->cb != nil){
-		freeb(epio->cb);
-		epio->cb = nil;
+	pkt = (struct usb_setup*) req;
+
+	if (n < Rsetuplen) {
+		usbprt("setup packet too short %d\n", n);
+		return -1;
 	}
-	if(n < Rsetuplen)
-		error(Ebadlen);
-	if(req[Rtype] & Rd2h){
-		datalen = GET2(req+Rcount);
-		if(datalen <= 0 || datalen > Maxctllen)
-			error(Ebadlen);
-		/* XXX cache madness */
-		epio->cb = b = allocb(ROUND(datalen, ep->maxpkt) + CACHELINESZ);
-		b->wp = (uchar*)ROUND((uintptr)b->wp, CACHELINESZ);
-		memset(b->wp, 0x55, b->lim - b->wp);
-		cachedwbinvse(b->wp, b->lim - b->wp);
-		data = b->wp;
-	}else{
-		b = nil;
+
+	data = req + Rsetuplen;
+
+	if (pkt->bmRequestType & Rd2h) { // device to host transfer
+		datalen = pkt->wLength;
+	} else { // host to device
 		datalen = n - Rsetuplen;
-		data = req + Rsetuplen;
 	}
-	hc = chanalloc(ep);
-	if(waserror()){
-		chanrelease(ep, hc);
-		if(strcmp(up->errstr, Estalled) == 0)
-			return 0;
-		nexterror();
-	}
-	chansetup(hc, ep);
-	chanio(ep, hc, Epout, SETUP, req, Rsetuplen);
-	if(req[Rtype] & Rd2h){
-		b->wp += chanio(ep, hc, Epin, DATA1, data, datalen);
-		chanio(ep, hc, Epout, DATA1, nil, 0);
-		n = Rsetuplen;
-	}else{
-		if(datalen > 0)
-			chanio(ep, hc, Epout, DATA1, data, datalen);
-		chanio(ep, hc, Epin, DATA1, nil, 0);
-		n = Rsetuplen + datalen;
-	}
-	chanrelease(ep, hc);
-	poperror();
-	return n;
-}
 
-static long
-ctldata(Ep *ep, void *a, long n)
-{
-	Epio *epio;
-	Block *b;
+	hc = alloc_chan();
 
-	epio = ep->aux;
-	b = epio->cb;
-	if(b == nil)
-		return 0;
-	if(n > BLEN(b))
-		n = BLEN(b);
-	memmove(a, b->rp, n);
-	b->rp += n;
-	if(BLEN(b) == 0){
-		freeb(b);
-		epio->cb = nil;
+	if (hc == NULL ) {
+		return -1;
 	}
+
+	setup_chan(hc, ep);
+
+	// send the request, then data data
+	chan_io(ep, hc, Epout, SETUP, req, Rsetuplen);
+
+	ret = 0;
+
+	if (req[Rtype] & Rd2h) {
+		ret = chan_io(ep, hc, Epin, DATA1, data, datalen);
+		chan_io(ep, hc, Epout, DATA1, NULL, 0);
+	} else {
+		if (datalen > 0) {
+			ret = chan_io(ep, hc, Epout, DATA1, data, datalen);
+		}
+
+		chan_io(ep, hc, Epin, DATA1, NULL, 0);
+	}
+
+	release_chan(hc);
+
+	n = Rsetuplen + ret;
 	return n;
 }
 
 /*read some data from the endpoint*/
 int ep_read(struct usb_ep *ep, void *a, int n)
 {
-	uchar 	*p;
-	ulong 	elapsed;
-	long 	nr;
-	int		ord;
+	long nr;
 
-	usbprt ("epread ep%d.%d %ld\n", ep->dev->id, ep->id, n);
+	usbprt("epread ep%d.%d %ld\n", ep->dev->id, ep->id, n);
 
-	switch(ep->ttype){
+	switch (ep->ttype) {
 	case EP_CTRL:
-		nr = ctldata(ep, a, n);
+		nr = ctl_trans(ep, a, n);
 		return nr;
 
 	case EP_INT:
 	case EP_BULK:
-		ord = get_order(align_up (n, ep->maxpkt));
-		p = kmalloc (ord);
-
-		if (p == NULL) {
-			usbprt("ep_read failed to alloc memory\n");
-			return -1;
-		}
-
-		nr = eptrans(ep, Read, p, n);
-		memmove(a, p, nr);
-
-		kfree (p, ord);
+		nr = ep_trans(ep, Read, a, n);
 		return nr;
 
 	default:
-		usbprt ("unsupported ep type: %d\n", ep->ttype);
+		usbprt("unsupported ep type: %d\n", ep->ttype);
 	}
 
 	return -1;
@@ -375,52 +447,42 @@ int ep_read(struct usb_ep *ep, void *a, int n)
 /*write some data to the endpoint*/
 static int ep_write(struct usb_ep *ep, void *a, int n)
 {
-	uchar 	*p;
-	ulong 	elapsed;
-	int		ord;
+	usbprt("ep_write ep%d.%d %ld\n", ep->dev->id, ep->id, n);
 
-	usbprt ("ep_write ep%d.%d %ld\n", ep->dev->nb, ep->nb, n);
-
-	switch(ep->ttype){
+	switch (ep->ttype) {
 	case EP_INT:
 	case EP_CTRL:
 	case EP_BULK:
-		ord = get_order (n);
-		p = kmalloc (ord);
-		memmove(p, a, n);
-
-		if(ep->ttype == Tctl) {
-			n = ctltrans(ep, p, n);
-		} else{
-			n = eptrans(ep, Write, p, n);
+		if (ep->ttype == EP_CTRL) {
+			n = ctl_trans(ep, a, n);
+		} else {
+			n = ep_trans(ep, Write, a, n);
 		}
-
-		kfree(p, ord);
 		return n;
 
 	default:
-		usbprt ("unsupported ep type: %d\n", ep->ttype);
+		usbprt("unsupported ep type: %d\n", ep->ttype);
 	}
 
 	return -1;
 }
 
 /* enable the host port, there is only one host port*/
-static int enable_hcport (void)
+static int enable_hcport(void)
 {
 	dwc_ctrl.regs->hport0 = Prtpwr | Prtena;
-	micro_delay (50);
+	micro_delay(50);
 
-	usbprt ("usbotg enable, sts %#x\n", dwc_ctrl.regs->hport0);
+	usbprt("usbotg enable, sts %#x\n", dwc_ctrl.regs->hport0);
 	return 0;
 }
 
 /* reset the host port */
-static int reset_hcport (void)
+static int reset_hcport(void)
 {
-	struct dwc_regs *r;
-	uint32			s;
-	uint32			b;
+	volatile struct dwc_regs *r;
+	uint32 s;
+	uint32 b;
 
 	r = dwc_ctrl.regs;
 
@@ -431,15 +493,15 @@ static int reset_hcport (void)
 	micro_delay(50);
 
 	s = r->hport0;
-	b = s & (Prtconndet|Prtenchng|Prtovrcurrchng);
+	b = s & (Prtconndet | Prtenchng | Prtovrcurrchng);
 
-	if(b != 0) {
+	if (b != 0) {
 		r->hport0 = Prtpwr | b;
 	}
 
 	usbprt("usbotg reset; sts %#x\n", s);
 
-	if((s & Prtena) == 0) {
+	if ((s & Prtena) == 0) {
 		usbprt("usbotg: host port not enabled after reset");
 	}
 
@@ -447,39 +509,41 @@ static int reset_hcport (void)
 }
 
 // reset the bits in core reset
-static void greset (volatile struct dwc_regs *regs, int bits)
+static void greset(volatile struct dwc_regs *regs, int bits)
 {
 	// set the bits, the controller will clear it when its done
 	regs->grstctl |= bits;
-	while (regs->grstctl & bits);
-	micro_delay (10);
+	while (regs->grstctl & bits)
+		;
+	micro_delay(10);
 }
 
 // initialize the DWC OTG host controller
-int usb_inithc ()
+int usb_inithc()
 {
 	volatile struct dwc_regs *regs;
-	uint32 id, n, rx, tx, ptx;
+	uint32 id, rx, tx, ptx;
 
 	dwc_ctrl.regs = P2V(DWC_PADDR);
 	regs = dwc_ctrl.regs;
 
 	// check ID of the USB controller (just basic saint check
 	id = regs->gsnpsid;
-	if ((id >> 16) != ('O'<< 8 | 'T')) {
+	if ((id >> 16) != ('O' << 8 | 'T')) {
 		usbprt("failed to detect DWC usb controller\n");
 		return -1;
 	}
 
 	dwc_ctrl.nchan = 1 + ((regs->ghwcfg2 & Num_host_chan) >> ONum_host_chan);
 
-	usbprt("dwc-otg rev %d.%x (%d channels)\n", (id >> 12) & 0x0F,
-			id & 0xFFF, dwc_ctrl.nchan);
+	usbprt("dwc-otg rev %d.%x (%d channels)\n", (id >> 12) & 0x0F, id & 0xFFF,
+			dwc_ctrl.nchan);
 
 	// power on USB, waiting for it to be in the AHB master idle state
 	regs->gahbcfg = 0;
-	power_usb ();
-	while ((regs->grstctl & Ahbidle) == 0);
+	power_usb();
+	while ((regs->grstctl & Ahbidle) == 0)
+		;
 
 	greset(regs, Csftrst);
 
@@ -497,10 +561,10 @@ int usb_inithc ()
 
 	regs->grxfsiz = rx;
 	regs->gnptxfsiz = rx | (tx << ODepth);
-	micro_delay (1);
+	micro_delay(1);
 
 	regs->hptxfsiz = (rx + tx) | (ptx << ODepth);
-	greset (regs, Rxfflsh);
+	greset(regs, Rxfflsh);
 
 	regs->grstctl = TXF_ALL;
 	greset(regs, Txfflsh);

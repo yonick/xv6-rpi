@@ -82,3 +82,8 @@ void micro_delay (int us)
         }
     }
 }
+
+uint32 get_tick (void)
+{
+	return stc_base[STC_COUNTERLO];
+}

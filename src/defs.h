@@ -185,6 +185,7 @@ void            syscall(void);
 // timer.c
 void            timer_init(int hz);
 extern struct   spinlock tickslock;
+uint32 			get_tick (void);
 
 // trap.c
 extern uint     ticks;

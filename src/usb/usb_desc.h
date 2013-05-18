@@ -43,7 +43,8 @@
 #define EP_ISIN(ep) 	(EP_DIR(ep) == IN)
 #define EP_ADDR(ep) 	((ep)->bEndpointAddress & 0x0F)
 #define EP_TTYPE(ep)	((ep)->bmAttributes & 0x03)
-
+#define DATA0			0
+#define DATA1			1
 /*
  * standard usb descriptor structures
  */
@@ -172,4 +173,32 @@ struct usb_hub_status {
 	uint16      wHubStatus;
 	uint16      wHubChange;
 } __attribute__ ((packed));
+
+//   http://www.beyondlogic.org/usbnutshell/usb6.shtml#SetupPacket
+// 0	 bmRequestType	 1	 Bit-Map 	D7 Data Phase Transfer Direction
+//											0 = Host to Device
+//											1 = Device to Host
+//										D6..5 Type
+//											0 = Standard
+//											1 = Class
+//											2 = Vendor
+//											3 = Reserved
+//										D4..0 Recipient
+//											0 = Device
+//											1 = Interface
+//											2 = Endpoint
+//											3 = Other
+//										4..31 = Reserved
+//1	 	bRequest	 	1	 Value		Request
+//2	 	wValue	 		2	 Value		Value
+//4	 	wIndex	 		2	 Index		Index/offset
+//6	 	wLength	 		2	 Count		#bytes to transfer for data phase (if any)
+struct usb_setup {
+	uint8		bmRequestType;
+	uint8		bRequest;
+	uint16		wValue;
+	uint16		wIndex;
+	uint16		wLength;
+	uint8		data[0];	// more data to follow if necessary
+}__attribute__((packed));
 #endif
