@@ -30,7 +30,7 @@ static struct hc_regs * alloc_chan(void)
 	for (i = 0; i < dwc_ctrl.nchan; i++) {
 		if ((dwc_ctrl.chanbusy & (1 << i)) == 0) {
 			dwc_ctrl.chanbusy |= (1 << i);
-			return (struct hc_regs*)(dwc_ctrl.regs->hchans + i);
+			return (struct hc_regs*) (dwc_ctrl.regs->hchans + i);
 		}
 	}
 
@@ -226,7 +226,7 @@ int chan_io(struct usb_ep *ep, struct hc_regs *hc, int dir, int pid, void *a,
 
 		// wait for the channel to complete
 		if ((ep->ttype == EP_BULK) && (dir == Epin)) {
-			intr = wait_chan (ep, hc, Chhltd);
+			intr = wait_chan(ep, hc, Chhltd);
 
 		} else if (ep->ttype == EP_INT && (hc->hcsplt & Spltena)) {
 			intr = wait_chan(ep, hc, Chhltd);
@@ -260,7 +260,7 @@ int chan_io(struct usb_ep *ep, struct hc_regs *hc, int dir, int pid, void *a,
 				continue;
 			}
 
-			usbprt ("ep%d.%d error intr %x\n", ep->dev->id, ep->id, intr);
+			usbprt("ep%d.%d error intr %x\n", ep->dev->id, ep->id, intr);
 
 			// other errors: transaction error, babble error, frame overrun
 			if (intr & ~(Chhltd | Ack)) {
@@ -338,7 +338,7 @@ int ep_trans(struct usb_ep *ep, int rw, void *a, int n)
 	}
 
 	hc = alloc_chan();
-	setup_chan (hc, ep);
+	setup_chan(hc, ep);
 
 	if ((rw == Read) && (ep->ttype == EP_BULK)) {
 		sofar = 0;
@@ -391,11 +391,6 @@ static int ctl_trans(struct usb_ep *ep, uchar *req, int n)
 	}
 
 	hc = alloc_chan();
-
-	if (hc == NULL ) {
-		return -1;
-	}
-
 	setup_chan(hc, ep);
 
 	// send the request, then data data
@@ -445,7 +440,7 @@ int ep_read(struct usb_ep *ep, void *a, int n)
 }
 
 /*write some data to the endpoint*/
-static int ep_write(struct usb_ep *ep, void *a, int n)
+int ep_write(struct usb_ep *ep, void *a, int n)
 {
 	usbprt("ep_write ep%d.%d %ld\n", ep->dev->id, ep->id, n);
 
@@ -468,7 +463,7 @@ static int ep_write(struct usb_ep *ep, void *a, int n)
 }
 
 /* enable the host port, there is only one host port*/
-static int enable_hcport(void)
+int enable_hcport(void)
 {
 	dwc_ctrl.regs->hport0 = Prtpwr | Prtena;
 	micro_delay(50);
@@ -478,7 +473,7 @@ static int enable_hcport(void)
 }
 
 /* reset the host port */
-static int reset_hcport(void)
+int reset_hcport(void)
 {
 	volatile struct dwc_regs *r;
 	uint32 s;
@@ -519,7 +514,7 @@ static void greset(volatile struct dwc_regs *regs, int bits)
 }
 
 // initialize the DWC OTG host controller
-int usb_inithc()
+int usb_inithcd ()
 {
 	volatile struct dwc_regs *regs;
 	uint32 id, rx, tx, ptx;

@@ -6,10 +6,10 @@
 						// ep0 is bi-directional
 enum {
 	/* device states */
-	Dconfig = 0, /* configuration in progress */
-	Denabled, /* address assigned */
-	Ddetach, /* device is detached */
-	Dreset, /* its port is being reset */
+	Dconfig = 0, 	/* configuration in progress */
+	Denabled, 		/* address assigned */
+	Ddetach, 		/* device is detached */
+	Dreset, 		/* its port is being reset */
 
 	/* Speeds */
 	Fullspeed = 0,
@@ -43,8 +43,6 @@ enum {
 
 	Read = 1,
 	Write = 2,
-
-
 };
 
 // endpoints
